@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg-page: #faf9f5;
+  --color-surface: #ffffff;
+  --color-primary: #d97757;
+  --color-ink: #141413;
+  --color-muted: #5e5d59;
+  --color-accent: #0d9488;
+  --color-danger: #dc2626;
+  --color-diff-add: #c1d5cd;
+  --color-diff-del: #e5ac93;
+  --color-border: #e8e6dc;
+  --color-border-dark: #d1cfc5;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-page);
+  color: var(--color-ink);
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+}
+
+.panel-surface {
+  background: var(--color-surface);
+  border-radius: 24px;
+  border: 1px solid var(--color-border);
+  padding: 24px;
+}
+
+.record-card {
+  background: var(--color-surface);
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  padding: 16px;
+  transition: all 0.15s ease;
+}
+.record-card:hover {
+  border-color: var(--color-border-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}

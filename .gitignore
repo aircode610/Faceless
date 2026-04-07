@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Environment
+.env
+
+# Agent runtime artifacts (regenerated per bootstrap/run)
+agent/
+recordings/
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
