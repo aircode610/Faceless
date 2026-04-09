@@ -85,8 +85,19 @@ def _build_server_config(selected: list[str]) -> dict:
             "args": list(spec["args"]),
             "transport": spec["transport"],
         }
-        # Pass through required env vars
-        entry["env"] = {k: os.environ[k] for k in env_keys}
+        # IMPORTANT: MCP's stdio transport REPLACES the subprocess env when
+        # you pass `env=...` — it does not merge with the parent process
+        # environment. That means we must include PATH, HOME, NODE_PATH,
+        # etc. explicitly, or npx-launched servers will misbehave.
+        #
+        # We merge the full parent env first, then layer in the required
+        # secrets. This way the subprocess gets a full functional
+        # environment (PATH resolves npx, HOME lets npm find its caches,
+        # proxies/TLS certs work) PLUS the credentials it needs.
+        merged_env = dict(os.environ)
+        for k in env_keys:
+            merged_env[k] = os.environ[k]
+        entry["env"] = merged_env
         config[name] = entry
     return config
 
