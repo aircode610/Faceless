@@ -1,4 +1,5 @@
 import type { ConversationLine } from "../api/types";
+import { Check, X } from "lucide-react";
 
 interface Props {
   conversation: ConversationLine[];
@@ -38,7 +39,7 @@ export default function TraceTimeline({ conversation }: Props) {
               {line.name && <span className="font-mono text-xs mr-1">{line.name}</span>}
               {typeof line.success === "boolean" && (
                 <span className={line.success ? "text-green-600" : "text-red-600"}>
-                  {line.success ? " ✓" : " ✗"}
+                  {line.success ? <Check className="w-3 h-3 inline" /> : <X className="w-3 h-3 inline" />}
                 </span>
               )}
               <span className="text-gray-700 break-all">

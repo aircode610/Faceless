@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Play, Bot } from "lucide-react";
 import { fetchOverview } from "../api/overview";
 import { getAgentStatus } from "../api/agent";
 import type { OverviewData } from "../api/types";
@@ -20,7 +21,7 @@ export default function DashboardPage() {
   if (!bootstrapped) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-6">
-        <span className="text-7xl">🎭</span>
+        <img src="/faceless.svg" alt="Faceless" className="w-28 h-28" />
         <h1 className="text-3xl font-semibold">Welcome to Faceless</h1>
         <p className="text-center max-w-md" style={{ color: "var(--color-muted)" }}>
           "A man has no name." — Your agent doesn't exist yet.
@@ -28,10 +29,10 @@ export default function DashboardPage() {
         </p>
         <Link
           to="/create"
-          className="px-8 py-3 rounded-lg text-white text-sm font-medium"
+          className="px-8 py-3 rounded-lg text-white text-sm font-medium flex items-center gap-2"
           style={{ background: "var(--color-primary)" }}
         >
-          ⚔️ Create Your Agent
+          <Bot className="w-4 h-4" /> Create Your Agent
         </Link>
       </div>
     );
@@ -50,10 +51,10 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={() => navigate("/run")}
-          className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+          className="px-4 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-2"
           style={{ background: "var(--color-primary)" }}
         >
-          ⚔️ Run a Task
+          <Play className="w-4 h-4" /> Run a Task
         </button>
       </div>
 

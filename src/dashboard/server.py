@@ -62,22 +62,18 @@ app.include_router(audit.router, prefix="/api/v1", tags=["audit"])
 FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
 if FRONTEND_DIST.exists():
+    # html=True makes StaticFiles serve index.html as the SPA fallback
+    # for any path that doesn't match a real file, replacing the manual
+    # spa_fallback route. API routes registered above take precedence.
     app.mount(
-        "/assets",
-        StaticFiles(directory=str(FRONTEND_DIST / "assets")),
-        name="assets",
+        "/",
+        StaticFiles(directory=str(FRONTEND_DIST), html=True),
+        name="frontend",
     )
-
-
-# SPA fallback — all non-API routes return index.html
-@app.get("/{full_path:path}", include_in_schema=False)
-async def spa_fallback(full_path: str):
-    if full_path.startswith("api/"):
-        raise HTTPException(404, "API route not found")
-    index = FRONTEND_DIST / "index.html"
-    if index.exists():
-        return FileResponse(str(index))
-    return {
-        "message": "Valar Morghulis. Frontend not built yet.",
-        "hint": "cd frontend && npm install && npm run build",
-    }
+else:
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def no_frontend(_: str):
+        return {
+            "message": "Valar Morghulis. Frontend not built yet.",
+            "hint": "cd frontend && npm install && npm run build",
+        }

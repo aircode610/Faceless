@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Check, X, ArrowRight } from "lucide-react";
 import { fetchQueue, approveSkill, rejectSkill, fetchFeatures, acceptFeature, deferFeature, dismissFeature } from "../api/review";
 import type { ReviewItem, FeatureRequest } from "../api/types";
 import PriorityBadge from "../components/PriorityBadge";
@@ -74,8 +75,8 @@ export default function ReviewQueuePage() {
                   <PriorityBadge priority={item.priority || "medium"} />
                   <EvolutionTypeBadge type={item.evolution_type || "fix"} />
                   <span className="font-medium text-sm">{item.name}</span>
-                  <span className="text-xs" style={{ color: "var(--color-muted)" }}>
-                    v{item.generation}→v{item.generation + 1}
+                  <span className="text-xs flex items-center gap-0.5" style={{ color: "var(--color-muted)" }}>
+                    v{item.generation}<ArrowRight className="w-3 h-3" />v{item.generation + 1}
                   </span>
                 </div>
                 {item.pattern_key && (
@@ -163,7 +164,7 @@ export default function ReviewQueuePage() {
                         className="text-[10px] px-1.5 py-0.5 rounded-full bg-white border hover:bg-gray-50"
                         style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
                       >
-                        view source run →
+                        view source run <ArrowRight className="w-3 h-3 inline" />
                       </Link>
                     )}
                   </div>
@@ -193,17 +194,17 @@ export default function ReviewQueuePage() {
               <div className="flex gap-3 pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
                 <button
                   onClick={handleApprove}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
                   style={{ background: "var(--color-accent)" }}
                 >
-                  ✓ Approve
+                  <Check className="w-4 h-4" /> Approve
                 </button>
                 <button
                   onClick={() => setShowReject(true)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
                   style={{ background: "var(--color-danger)" }}
                 >
-                  ✗ Reject
+                  <X className="w-4 h-4" /> Reject
                 </button>
               </div>
 
@@ -226,7 +227,7 @@ export default function ReviewQueuePage() {
             </div>
           ) : (
             <div className="panel-surface text-center py-12" style={{ color: "var(--color-muted)" }}>
-              <div className="text-4xl mb-2">🎭</div>
+              <img src="/faceless.svg" alt="" className="w-12 h-12 mx-auto mb-2 opacity-40" />
               <div className="text-sm">Select an item from the queue to review</div>
               <div className="text-xs mt-1">"A man must wait."</div>
             </div>

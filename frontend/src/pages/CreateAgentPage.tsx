@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getAgentStatus, getDefaultMCPs, startBootstrap, pollJob } from "../api/agent";
 import type { MCP, Job } from "../api/agent";
 import JobProgress from "../components/JobProgress";
+import { Bot, Check, AlertTriangle, Play, ArrowRight } from "lucide-react";
 
 export default function CreateAgentPage() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function CreateAgentPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="text-center space-y-2">
-        <span className="text-5xl">🎭</span>
+        <img src="/faceless.svg" alt="Faceless" className="w-20 h-20 mx-auto" />
         <h1 className="text-2xl font-semibold">The House of Black and White</h1>
         <p className="text-sm" style={{ color: "var(--color-muted)" }}>
           "A man must say his name." — Describe your agent and it shall be given a face.
@@ -125,20 +126,20 @@ export default function CreateAgentPage() {
                       style={{ borderColor: m.selected ? "var(--color-primary)" : "var(--color-border)" }}
                     >
                       <div className="flex items-center gap-2">
-                        <span className={`w-4 h-4 rounded border flex items-center justify-center text-xs ${
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center ${
                           m.selected ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]" : ""
                         }`} style={!m.selected ? { borderColor: "var(--color-border-dark)" } : {}}>
-                          {m.selected ? "✓" : ""}
+                          {m.selected && <Check className="w-3 h-3" />}
                         </span>
                         <span className="font-medium">{m.name}</span>
                         {m.credentials_available === true && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
-                            ✓ credentials
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-0.5">
+                            <Check className="w-2.5 h-2.5" /> credentials
                           </span>
                         )}
                         {m.credentials_available === false && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
-                            ⚠ missing env var
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 flex items-center gap-0.5">
+                            <AlertTriangle className="w-2.5 h-2.5" /> missing env var
                           </span>
                         )}
                       </div>
@@ -159,10 +160,10 @@ export default function CreateAgentPage() {
               <button
                 onClick={handleSubmit}
                 disabled={!description.trim()}
-                className="w-full py-3 rounded-lg text-white text-sm font-medium transition-opacity disabled:opacity-40"
+                className="w-full py-3 rounded-lg text-white text-sm font-medium transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
                 style={{ background: "var(--color-primary)" }}
               >
-                ⚔️ Begin the Ritual — Create Agent
+                <Bot className="w-4 h-4" /> Begin the Ritual — Create Agent
               </button>
             </div>
           )}
@@ -197,17 +198,17 @@ export default function CreateAgentPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => navigate("/dashboard")}
-                      className="flex-1 py-2 rounded-lg text-white text-sm font-medium"
+                      className="flex-1 py-2 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2"
                       style={{ background: "var(--color-accent)" }}
                     >
-                      Go to Dashboard →
+                      Go to Dashboard <ArrowRight className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => navigate("/run")}
-                      className="flex-1 py-2 rounded-lg text-white text-sm font-medium"
+                      className="flex-1 py-2 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2"
                       style={{ background: "var(--color-primary)" }}
                     >
-                      Run a Task →
+                      <Play className="w-4 h-4" /> Run a Task
                     </button>
                   </div>
                 </div>

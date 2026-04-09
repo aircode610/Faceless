@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Bot, Play } from "lucide-react";
 import { fetchQueue } from "../api/review";
 import { getAgentStatus } from "../api/agent";
 
@@ -32,7 +33,7 @@ export default function MainLayout() {
         style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
       >
         <NavLink to="/dashboard" className="flex items-center gap-2 mr-2">
-          <span className="text-lg">🎭</span>
+          <img src="/faceless.svg" alt="Faceless" className="w-9 h-9" />
           <span className="font-semibold text-sm">Faceless</span>
         </NavLink>
 
@@ -40,13 +41,13 @@ export default function MainLayout() {
 
         {/* Run Task — prominent button */}
         <NavLink to="/run" className={({ isActive }) =>
-          `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
             isActive
               ? "text-white bg-[var(--color-primary)]"
               : "text-[var(--color-primary)] border border-[var(--color-primary)] hover:bg-orange-50"
           }`
         }>
-          ⚔️ Run Task
+          <Play className="w-3.5 h-3.5" /> Run Task
         </NavLink>
 
         <NavLink to="/skills" className={linkClass}>Skills</NavLink>
@@ -66,7 +67,7 @@ export default function MainLayout() {
           <NavLink
             to="/create"
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+              `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border flex items-center gap-1.5 ${
                 isActive
                   ? "text-white bg-[var(--color-accent)] border-[var(--color-accent)]"
                   : bootstrapped
@@ -75,7 +76,8 @@ export default function MainLayout() {
               }`
             }
           >
-            🎭 {bootstrapped ? "New Agent" : "Create Agent"}
+            <Bot className="w-4 h-4" />
+            {bootstrapped ? "New Agent" : "Create Agent"}
           </NavLink>
         </div>
       </nav>

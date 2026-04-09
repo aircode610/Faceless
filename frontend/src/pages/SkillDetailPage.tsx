@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Check, X } from "lucide-react";
 import { fetchSkillDetail } from "../api/skills";
 import type { SkillDetail } from "../api/types";
 import EvolutionTypeBadge from "../components/EvolutionTypeBadge";
@@ -120,7 +121,7 @@ export default function SkillDetailPage() {
                 {skill.recent_judgments.map((j, i) => (
                   <div key={i} className="text-xs p-2 rounded-lg" style={{ background: "var(--color-bg-page)" }}>
                     <span className={j.skill_applied ? "text-green-600" : "text-red-600"}>
-                      {j.skill_applied ? "✓ Applied" : "✗ Not applied"}
+                      {j.skill_applied ? <><Check className="w-3 h-3 inline mr-0.5" />Applied</> : <><X className="w-3 h-3 inline mr-0.5" />Not applied</>}
                     </span>
                     {j.note && <span className="ml-2" style={{ color: "var(--color-muted)" }}>{j.note}</span>}
                   </div>

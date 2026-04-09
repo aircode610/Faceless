@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { Check, X, CheckCircle } from "lucide-react";
 import { fetchRunDetail } from "../api/runs";
 import type { RunDetail } from "../api/types";
 import TraceTimeline from "../components/TraceTimeline";
@@ -63,7 +64,7 @@ export default function RunDetailPage() {
                       {j.skill_id.split("__")[0]}
                     </Link>
                     <span className={j.skill_applied ? "text-green-600 text-xs" : "text-yellow-600 text-xs"}>
-                      {j.skill_applied ? "✓ Applied" : "✗ Not applied"}
+                      {j.skill_applied ? <><Check className="w-3 h-3 inline mr-0.5" />Applied</> : <><X className="w-3 h-3 inline mr-0.5" />Not applied</>}
                     </span>
                   </div>
                   {j.note && <div className="text-xs mt-1" style={{ color: "var(--color-muted)" }}>{j.note}</div>}
@@ -77,7 +78,7 @@ export default function RunDetailPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <span className={`text-sm font-medium ${run.llm_task_completed ? "text-green-600" : "text-yellow-600"}`}>
-                Task {run.llm_task_completed ? "Completed ✓" : "Incomplete"}
+                {run.llm_task_completed ? <><CheckCircle className="w-4 h-4 inline mr-1" />Task Completed</> : "Task Incomplete"}
               </span>
             </div>
 
@@ -110,7 +111,7 @@ export default function RunDetailPage() {
                       <span className="font-mono" style={{ color: "var(--color-muted)" }}>iter {t.iter}</span>
                       <span className="font-medium">{t.tool}</span>
                       <span className={t.success ? "text-green-600" : "text-red-600"}>
-                        {t.success ? "✓" : "✗"} {t.duration_ms}ms
+                        {t.success ? <Check className="w-3 h-3 inline" /> : <X className="w-3 h-3 inline" />} {t.duration_ms}ms
                       </span>
                     </div>
                   ))}
