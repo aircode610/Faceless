@@ -422,6 +422,90 @@ class SkillStore:
         )
         self.conn.commit()
 
+    # ── Tool Degradation (Trigger 2) ─────────────────
+
+    def get_problematic_tools(
+        self, threshold: float, min_calls: int, window: int
+    ) -> list[dict]:
+        """
+        Find tools whose recent success rate falls below the threshold.
+        Uses a rolling window of the last N calls per tool.
+        """
+        rows = self.conn.execute(
+            """
+            SELECT tool_name, COUNT(*) as total_calls,
+                   CAST(SUM(success) AS REAL) / COUNT(*) as success_rate
+            FROM (
+                SELECT tool_name, success,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY tool_name ORDER BY created_at DESC
+                       ) as rn
+                FROM tool_calls
+            )
+            WHERE rn <= ?
+            GROUP BY tool_name
+            HAVING total_calls >= ? AND success_rate < ?
+            """,
+            (window, min_calls, threshold),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_all_recent_tool_names(self, window: int) -> list[str]:
+        """Get all distinct tool names that appear in the rolling window."""
+        rows = self.conn.execute(
+            """
+            SELECT DISTINCT tool_name FROM (
+                SELECT tool_name,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY tool_name ORDER BY created_at DESC
+                       ) as rn
+                FROM tool_calls
+            ) WHERE rn <= ?
+            """,
+            (window,),
+        ).fetchall()
+        return [r["tool_name"] for r in rows]
+
+    def get_skills_for_tool(self, tool_name: str) -> list[str]:
+        """Get active skill IDs that depend on a given tool."""
+        rows = self.conn.execute(
+            """
+            SELECT d.skill_id FROM skill_tool_deps d
+            JOIN skills s ON s.id = d.skill_id
+            WHERE d.tool_name = ? AND s.status = 'active'
+            """,
+            (tool_name,),
+        ).fetchall()
+        return [r["skill_id"] for r in rows]
+
+    def upsert_skill_tool_dep(self, skill_id: str, tool_name: str):
+        """Record that a skill references a tool."""
+        self.conn.execute(
+            "INSERT OR IGNORE INTO skill_tool_deps (skill_id, tool_name) VALUES (?, ?)",
+            (skill_id, tool_name),
+        )
+        self.conn.commit()
+
+    # ── Skill Health (Trigger 3) ──────────────────────
+
+    def get_recent_judgments_for_skill(
+        self, skill_id: str, limit: int = 5
+    ) -> list[dict]:
+        """Get recent execution judgments for the LLM confirmation gate context."""
+        rows = self.conn.execute(
+            """
+            SELECT sj.run_id, sj.skill_applied, sj.note,
+                   r.task_description, r.llm_task_completed
+            FROM skill_judgments sj
+            JOIN runs r ON r.id = sj.run_id
+            WHERE sj.skill_id = ?
+            ORDER BY r.created_at DESC
+            LIMIT ?
+            """,
+            (skill_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     # ── Audit Log ────────────────────────────────────
 
     def insert_audit(

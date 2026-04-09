@@ -30,9 +30,17 @@ User Description + Available MCPs
 
         |
         v
- EVOLUTION ENGINE (not yet implemented)
+ EVOLUTION ENGINE
    FIX / DERIVED / CAPTURED skill improvements
    -> all land as status=pending, require human approval
+
+        |
+        v  (background, after every run)
+ TRIGGER 2 — Tool Degradation Detection
+   Rolling window success rate < 50% → LLM confirm → FIX evolution
+
+ TRIGGER 3 — Periodic Skill Health Check (every 5 runs)
+   Rule-based diagnosis → LLM confirm → FIX or DERIVED evolution
 
         |
         v
@@ -137,6 +145,7 @@ src/
     store.py                   # SQLite schema + CRUD
     registry.py                # Two-stage skill selection (quality filter + LLM)
     analyzer.py                # Trigger 1: post-execution analysis
+    triggers.py                # Triggers 2 & 3: tool degradation + skill health check
     evolver.py                 # Evolution engine: FIX/DERIVED/CAPTURED
   prompts/
     meta_agent_prompts.py      # MCP selection + bootstrap prompts
@@ -193,9 +202,9 @@ recordings/                    # Generated per task run (gitignored)
 
 ## What's Not Yet Implemented
 
-- [ ] **Trigger 2** — Tool degradation detection (background)
-- [ ] **Trigger 3** — Periodic skill health check (background, every 5 runs)
-- [ ] **LLM Confirmation Gate** — For Triggers 2 & 3
+- [x] **Trigger 2** — Tool degradation detection (background)
+- [x] **Trigger 3** — Periodic skill health check (background, every 5 runs)
+- [x] **LLM Confirmation Gate** — For Triggers 2 & 3
 - [ ] **Benchmark Regression Guard** — Run benchmarks before approving evolutions
 - [ ] **Approval CLI** — `manage.py` commands for terminal-based review
 - [ ] **Lineage Graph Visualization** — Interactive node-link graph in frontend

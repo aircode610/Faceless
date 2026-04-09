@@ -34,6 +34,7 @@ from src.skill_engine.analyzer import analyze_run
 from src.skill_engine.evolver import process_pending_evolutions
 from src.skill_engine.registry import select_skills
 from src.skill_engine.store import SkillStore
+from src.skill_engine.triggers import dispatch_background_triggers
 from src.tools.loader import load_tools_for_agent
 
 
@@ -48,6 +49,7 @@ class OrchestratorState(TypedDict):
     recording_dir: str
     analysis_result: dict | None
     evolution_results: list[dict]
+    background_trigger_status: str
     tools: list  # LangChain tool objects to mount
 
 
@@ -249,6 +251,12 @@ def evolution_node(state: OrchestratorState) -> dict:
         store.close()
 
 
+def dispatch_triggers_node(state: OrchestratorState) -> dict:
+    """Fire Trigger 2 & 3 in background threads. Non-blocking."""
+    dispatch_background_triggers(state["run_id"])
+    return {"background_trigger_status": "dispatched"}
+
+
 # ── Graph ────────────────────────────────────────────
 
 def build_orchestrator_graph() -> StateGraph:
@@ -265,6 +273,7 @@ def build_orchestrator_graph() -> StateGraph:
     graph.add_node("record_artifacts", record_artifacts_node)
     graph.add_node("trigger1_analysis", trigger1_analysis_node)
     graph.add_node("evolution", evolution_node)
+    graph.add_node("dispatch_triggers", dispatch_triggers_node)
 
     graph.add_edge(START, "init_run")
     graph.add_edge("init_run", "select_skills")
@@ -273,7 +282,8 @@ def build_orchestrator_graph() -> StateGraph:
     graph.add_edge("execute_task", "record_artifacts")
     graph.add_edge("record_artifacts", "trigger1_analysis")
     graph.add_edge("trigger1_analysis", "evolution")
-    graph.add_edge("evolution", END)
+    graph.add_edge("evolution", "dispatch_triggers")
+    graph.add_edge("dispatch_triggers", END)
 
     return graph
 
@@ -320,6 +330,7 @@ def run_task(
         "recording_dir": "",
         "analysis_result": None,
         "evolution_results": [],
+        "background_trigger_status": "",
         "tools": tools or [],
     })
 

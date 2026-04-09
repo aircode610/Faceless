@@ -5,8 +5,15 @@ import { fetchQueue, approveSkill, rejectSkill, fetchFeatures, acceptFeature, de
 import type { ReviewItem, FeatureRequest } from "../api/types";
 import PriorityBadge from "../components/PriorityBadge";
 import EvolutionTypeBadge from "../components/EvolutionTypeBadge";
+import TriggerBadge from "../components/TriggerBadge";
 import DiffViewer from "../components/DiffViewer";
 import { timeAgo } from "../utils/format";
+
+const TRIGGER_DESCRIPTIONS: Record<string, string> = {
+  trigger1: "The LLM analyzed the last task execution and suggested this improvement based on what it observed in the conversation and tool traces.",
+  trigger2: "A tool this skill depends on has been failing frequently (success rate below 50%). This evolution adds resilience or alternative approaches.",
+  trigger3: "Periodic health check detected poor metrics for this skill \u2014 it may have a high fallback rate, low completion rate, or low overall effectiveness.",
+};
 
 export default function ReviewQueuePage() {
   const [queue, setQueue] = useState<ReviewItem[]>([]);
@@ -74,6 +81,7 @@ export default function ReviewQueuePage() {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <PriorityBadge priority={item.priority || "medium"} />
                   <EvolutionTypeBadge type={item.evolution_type || "fix"} />
+                  <TriggerBadge trigger={item.trigger || "trigger1"} />
                   <span className="font-medium text-sm">{item.name}</span>
                   <span className="text-xs flex items-center gap-0.5" style={{ color: "var(--color-muted)" }}>
                     v{item.generation}<ArrowRight className="w-3 h-3" />v{item.generation + 1}
@@ -138,10 +146,20 @@ export default function ReviewQueuePage() {
         <div className="col-span-3">
           {selected ? (
             <div className="panel-surface space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <PriorityBadge priority={selected.priority || "medium"} />
                 <EvolutionTypeBadge type={selected.evolution_type || "fix"} />
+                <TriggerBadge trigger={selected.trigger || "trigger1"} />
                 <span className="font-semibold">{selected.name}</span>
+              </div>
+
+              {/* Trigger explainer — helps reviewers understand the source */}
+              <div
+                className="flex items-start gap-2 p-2.5 rounded-lg text-xs leading-relaxed"
+                style={{ background: "var(--color-bg-page)", color: "var(--color-muted)" }}
+              >
+                <span className="font-semibold shrink-0">Source:</span>
+                <span>{TRIGGER_DESCRIPTIONS[selected.trigger] || TRIGGER_DESCRIPTIONS.trigger1}</span>
               </div>
 
               {/* Reason — WHY this evolution, grounded in trace evidence */}

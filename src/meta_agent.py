@@ -181,6 +181,13 @@ def persist_artifacts(state: MetaAgentState) -> dict:
         store.insert_skill(record)
         store.insert_audit(skill_id, "bootstrap", reviewer="meta-agent")
 
+        # Record tool deps — at bootstrap we match selected MCP names
+        # against skill content. Actual tool names are populated after
+        # first execution via Trigger 1.
+        for mcp_name in state["selected_mcps"]:
+            if mcp_name.lower() in content.lower():
+                store.upsert_skill_tool_dep(skill_id, mcp_name)
+
         # Write skill directory
         skill_dir = os.path.join(SKILLS_DIR, skill_name)
         os.makedirs(skill_dir, exist_ok=True)

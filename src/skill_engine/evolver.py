@@ -14,6 +14,8 @@ import os
 import re
 from typing import TypedDict
 
+from src.config import AGENT_CONFIG_PATH
+
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 
@@ -151,6 +153,46 @@ def _parse_evolution_output(raw: str) -> tuple[str | None, str | None, bool]:
         content = "\n".join(lines)
 
     return change_summary, content, True
+
+
+def _load_known_tool_names() -> list[str]:
+    """Load tool names from agent_config.json if available."""
+    if not os.path.exists(AGENT_CONFIG_PATH):
+        return []
+    try:
+        with open(AGENT_CONFIG_PATH) as f:
+            config = json.load(f)
+        return config.get("tool_names", [])
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def extract_tool_names_from_content(
+    content: str, known_tools: list[str] | None = None
+) -> list[str]:
+    """
+    Extract tool name references from SKILL.md content.
+    Matches known tool names against backtick-quoted identifiers and
+    plain text mentions in the skill content.
+    """
+    if known_tools is None:
+        known_tools = _load_known_tool_names()
+    if not known_tools:
+        return []
+
+    content_lower = content.lower()
+    found = []
+    for tool in known_tools:
+        if tool.lower() in content_lower:
+            found.append(tool)
+    return found
+
+
+def _populate_skill_tool_deps(store: SkillStore, skill_id: str, content: str):
+    """Extract tool names from skill content and record dependencies."""
+    tools = extract_tool_names_from_content(content)
+    for tool_name in tools:
+        store.upsert_skill_tool_dep(skill_id, tool_name)
 
 
 def _build_metric_summary(skill: SkillRecord) -> str:
@@ -402,6 +444,7 @@ def persist_node(state: EvolutionState) -> dict:
 
         # Insert into DB
         store.insert_skill(record)
+        _populate_skill_tool_deps(store, record.id, content)
         store.insert_audit(
             new_id, "evolution_created",
             reviewer="evolution-engine",
