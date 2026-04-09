@@ -6,6 +6,12 @@ All thresholds and constants live here.
 # ── LLM ──────────────────────────────────────────────
 LLM_MODEL = "claude-sonnet-4-20250514"
 LLM_TEMPERATURE = 0
+# Output token cap. Bootstrap generates a full constitution + 5 SKILL.md
+# files in a single structured-output call, which can easily exceed 12k
+# output tokens. Claude Sonnet 4 supports up to 64k output tokens.
+LLM_MAX_TOKENS = 16_384
+# HTTP timeout for a single LLM request (seconds). Prevents silent hangs.
+LLM_TIMEOUT = 300
 
 # ── Evolution engine ─────────────────────────────────
 EVOLUTION_MAX_ITERATIONS = 5
@@ -53,7 +59,11 @@ BENCHMARK_PASS_THRESHOLD = 0.80
 MAX_EXECUTION_ITERATIONS = 15
 
 # ── Bootstrap ────────────────────────────────────────
-DEFAULT_INITIAL_SKILLS_COUNT = 5
+# Number of initial skills the meta-agent should generate. Keep this small
+# — each skill is a full SKILL.md file generated in a single structured
+# output call. 3 is the sweet spot: enough to cover a domain, small enough
+# to finish in <60s.
+DEFAULT_INITIAL_SKILLS_COUNT = 3
 
 # ── Paths ────────────────────────────────────────────
 AGENT_DIR = "agent"

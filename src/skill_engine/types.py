@@ -29,11 +29,15 @@ class SkillScript(BaseModel):
 
 
 class BootstrapSkill(BaseModel):
+    """
+    Minimal skill schema for bootstrap — intentionally flat.
+    Nested scripts/references blow up the structured output generation
+    and are rarely needed at bootstrap time anyway. They can be added
+    later via CAPTURED evolution.
+    """
     name: str
     category: str
     content: str
-    scripts: list[SkillScript] = Field(default_factory=list)
-    references: list[SkillScript] = Field(default_factory=list)
 
 
 class BootstrapResult(BaseModel):
@@ -85,6 +89,7 @@ class EvolutionSuggestion(BaseModel):
     target_skills: list[str] = Field(default_factory=list)
     category: str = "workflow"
     direction: str
+    reason: str = ""  # WHY this evolution is needed, grounded in trace evidence
     priority: str = "medium"
     pattern_key: str = ""
 

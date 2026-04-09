@@ -14,7 +14,6 @@ import json
 import os
 from typing import Annotated, TypedDict
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
@@ -24,10 +23,9 @@ from src.config import (
     CONSTITUTION_PATH,
     DB_PATH,
     DEFAULT_INITIAL_SKILLS_COUNT,
-    LLM_MODEL,
-    LLM_TEMPERATURE,
     SKILLS_DIR,
 )
+from src.llm import get_llm
 from src.prompts.meta_agent_prompts import BOOTSTRAP_TEMPLATE, MCP_SELECTION_TEMPLATE
 from src.skill_engine.store import SkillStore
 from src.skill_engine.types import (
@@ -55,7 +53,7 @@ class MetaAgentState(TypedDict):
 
 def select_mcps(state: MetaAgentState) -> dict:
     """Step 1: LLM selects which MCPs the agent needs."""
-    llm = init_chat_model(LLM_MODEL, temperature=LLM_TEMPERATURE)
+    llm = get_llm()
     structured_llm = llm.with_structured_output(MCPSelectionResult)
 
     mcp_list_str = "\n".join(
@@ -84,7 +82,7 @@ def select_mcps(state: MetaAgentState) -> dict:
 
 def generate_bootstrap(state: MetaAgentState) -> dict:
     """Step 2: LLM generates constitution + initial skills."""
-    llm = init_chat_model(LLM_MODEL, temperature=LLM_TEMPERATURE)
+    llm = get_llm()
     structured_llm = llm.with_structured_output(BootstrapResult)
 
     # Build MCP descriptions for selected only
@@ -110,9 +108,35 @@ def generate_bootstrap(state: MetaAgentState) -> dict:
     }
 
 
+def _reset_agent_state():
+    """
+    Wipe any previous agent state before a new bootstrap writes over it.
+    This removes:
+      - agent/db/agent.db (all skills, runs, evolutions, audit log)
+      - agent/skills/* (all on-disk skill directories)
+      - agent/constitution.md + backup versions
+      - recordings/* (task run artifacts)
+      - agent_config.json
+    It deliberately does NOT touch anything outside these paths.
+    """
+    import shutil
+    from src.config import RECORDINGS_DIR
+
+    agent_dir = os.path.dirname(AGENT_CONFIG_PATH)
+
+    # Nuke the whole agent/ directory and recordings/
+    if os.path.isdir(agent_dir):
+        shutil.rmtree(agent_dir)
+    if os.path.isdir(RECORDINGS_DIR):
+        shutil.rmtree(RECORDINGS_DIR)
+
+
 def persist_artifacts(state: MetaAgentState) -> dict:
     """Step 3: Write everything to disk and SQLite."""
-    # Ensure directories
+    # Reset any prior agent state — bootstrap is "create fresh agent"
+    _reset_agent_state()
+
+    # (Re)create directories
     os.makedirs(os.path.dirname(AGENT_CONFIG_PATH), exist_ok=True)
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     os.makedirs(SKILLS_DIR, exist_ok=True)

@@ -183,6 +183,7 @@ recordings/                    # Generated per task run (gitignored)
 - [x] **Skill Selection** — Two-stage: quality pre-filter (exclude broken skills) + LLM selection with structured output
 - [x] **Trigger 1 Analysis** — Post-execution LLM analysis with skill judgments, evolution suggestions, feature requests, recurrence tracking
 - [x] **Evolution Engine** — FIX/DERIVED/CAPTURED LangGraph inner loop with validation, retry, diff computation, and pending skill creation
+- [x] **MCP Tool Mounting** — `langchain-mcp-adapters` with `MultiServerMCPClient` connects real MCP servers (github, search) as LangChain tools based on agent config
 - [x] **SQLite Store** — Full schema from spec (skills, runs, judgments, evolution_suggestions, feature_requests, tool_calls, audit_log)
 - [x] **FastAPI Dashboard** — All endpoints from the API spec
 - [x] **React Frontend** — All pages from the UI spec with design tokens
@@ -198,7 +199,6 @@ recordings/                    # Generated per task run (gitignored)
 - [ ] **Benchmark Regression Guard** — Run benchmarks before approving evolutions
 - [ ] **Approval CLI** — `manage.py` commands for terminal-based review
 - [ ] **Lineage Graph Visualization** — Interactive node-link graph in frontend
-- [ ] **MCP Tool Mounting** — Actually connecting real MCP servers to the execution agent
 
 ---
 

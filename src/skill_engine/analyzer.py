@@ -8,13 +8,10 @@ from __future__ import annotations
 import json
 import os
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 
 from src.config import (
     DB_PATH,
-    LLM_MODEL,
-    LLM_TEMPERATURE,
     MAX_CONVERSATION_CHARS,
     MAX_SKILL_CONTENT_CHARS,
     MAX_TOOL_ARGS_CHARS,
@@ -24,6 +21,7 @@ from src.config import (
     RECURRENCE_MIN_DISTINCT_RUNS,
     RECURRENCE_PROMOTION_THRESHOLD,
 )
+from src.llm import get_llm
 from src.prompts.skill_engine_prompts import EXECUTION_ANALYSIS_TEMPLATE
 from src.skill_engine.store import SkillStore
 from src.skill_engine.types import ExecutionAnalysis
@@ -121,7 +119,7 @@ def analyze_run(run_id: str, recording_dir: str, store: SkillStore) -> Execution
     )
 
     # Call LLM with structured output
-    llm = init_chat_model(LLM_MODEL, temperature=LLM_TEMPERATURE)
+    llm = get_llm()
     structured_llm = llm.with_structured_output(ExecutionAnalysis)
     analysis: ExecutionAnalysis = structured_llm.invoke(
         [HumanMessage(content=prompt)]

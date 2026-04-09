@@ -1,27 +1,60 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { fetchOverview } from "../api/overview";
+import { getAgentStatus } from "../api/agent";
 import type { OverviewData } from "../api/types";
 import MetricCard from "../components/MetricCard";
 import EvolutionTypeBadge from "../components/EvolutionTypeBadge";
 import { timeAgo } from "../utils/format";
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState<OverviewData | null>(null);
+  const [bootstrapped, setBootstrapped] = useState(true);
 
   useEffect(() => {
-    fetchOverview().then(setData);
+    fetchOverview().then(setData).catch(() => {});
+    getAgentStatus().then((s) => setBootstrapped(s.bootstrapped)).catch(() => {});
   }, []);
+
+  if (!bootstrapped) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-6">
+        <span className="text-7xl">🎭</span>
+        <h1 className="text-3xl font-semibold">Welcome to Faceless</h1>
+        <p className="text-center max-w-md" style={{ color: "var(--color-muted)" }}>
+          "A man has no name." — Your agent doesn't exist yet.
+          <br />Create one to begin the ritual.
+        </p>
+        <Link
+          to="/create"
+          className="px-8 py-3 rounded-lg text-white text-sm font-medium"
+          style={{ background: "var(--color-primary)" }}
+        >
+          ⚔️ Create Your Agent
+        </Link>
+      </div>
+    );
+  }
 
   if (!data) return <div className="text-center py-12" style={{ color: "var(--color-muted)" }}>Loading...</div>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <span className="text-sm" style={{ color: "var(--color-muted)" }}>
-          "Valar Morghulis" — The Many-Faced God sees all
-        </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <span className="text-sm" style={{ color: "var(--color-muted)" }}>
+            "Valar Morghulis" — The Many-Faced God sees all
+          </span>
+        </div>
+        <button
+          onClick={() => navigate("/run")}
+          className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+          style={{ background: "var(--color-primary)" }}
+        >
+          ⚔️ Run a Task
+        </button>
       </div>
 
       {/* Metrics */}

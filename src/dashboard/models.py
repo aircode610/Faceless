@@ -30,3 +30,17 @@ class UpdateConstitutionRequest(BaseModel):
 
 class DismissFeatureRequest(BaseModel):
     reason: str = ""
+
+
+class MCPItem(BaseModel):
+    name: str
+    description: str
+
+
+class BootstrapRequest(BaseModel):
+    description: str
+    mcps: list[MCPItem] = []
+
+
+class RunTaskRequest(BaseModel):
+    task: str

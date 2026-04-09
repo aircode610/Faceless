@@ -13,7 +13,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 # Node.js 18+ (for frontend)
-cd frontend && npm install && cd ..
+cd frontend && npm install && npm run build && cd ..
 
 # Required
 export ANTHROPIC_API_KEY=your-key
@@ -22,16 +22,88 @@ export ANTHROPIC_API_KEY=your-key
 export LANGSMITH_TRACING=true
 export LANGSMITH_API_KEY=your-langsmith-key
 export LANGSMITH_PROJECT=faceless
+
+# Optional — MCP tools (only needed for the MCPs you select)
+# Node.js + npx must be installed (brew install node)
+export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxx  # for github MCP
+export TAVILY_API_KEY=tvly_xxx               # for search MCP
 ```
+
+## MCP Tools
+
+Faceless uses [`langchain-mcp-adapters`](https://github.com/langchain-ai/langchain-mcp-adapters)
+to mount real MCP servers as LangChain tools for the execution agent.
+
+Currently wired up:
+
+| MCP name | Backing server | Required env var |
+|----------|---------------|------------------|
+| `github` | `@modelcontextprotocol/server-github` (npx stdio) | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| `search` | `tavily-mcp` (npx stdio) | `TAVILY_API_KEY` |
+
+If the agent was bootstrapped with an MCP selected but the corresponding env
+var is missing at run time, that MCP is silently skipped — the task still runs,
+just without those tools.
+
+Other MCPs in the catalog (trello, slack, sqlite, filesystem, terminal) are
+accepted during bootstrap but don't have a real server bound yet — they'll
+also be skipped at run time.
+
+To add a new MCP, edit `src/tools/loader.py` and add an entry to
+`MCP_SERVER_SPECS` with the command, args, and required env vars.
+
+---
+
+## Two Ways to Use Faceless
+
+### Option A: Web Dashboard (Recommended)
+
+Start the server and do everything from the browser:
+
+```bash
+uvicorn src.dashboard.server:app --port 7788
+# Visit http://localhost:7788
+```
+
+For frontend development with hot reload:
+```bash
+uvicorn src.dashboard.server:app --port 7788 &
+cd frontend && npm run dev
+# Visit http://localhost:5173
+```
+
+### Option B: CLI
+
+```bash
+python main.py bootstrap -d "your agent description"
+python main.py run -t "your task"
+python main.py status
+```
+
+Both methods use the same backend — the dashboard and CLI share the same agent, DB, and artifacts.
 
 ---
 
 ## The Pipeline — Step by Step
 
-### Step 1: Bootstrap — Create Your Agent
+### Step 1: Create Your Agent
 
 The meta-agent runs **once** to create the agent's identity: which tools it uses,
 what rules it follows, and what skills it starts with.
+
+#### Via Dashboard
+
+1. Open `http://localhost:7788` — if no agent exists, the dashboard shows a welcome
+   screen with a **Create Your Agent** button
+2. Click **Create Agent** (or visit `/create` directly)
+3. Write your agent description (e.g., "Review GitHub PRs for security issues")
+4. Toggle which MCPs (tools) should be available — the LLM will pick only the ones it needs
+5. Click **Begin the Ritual**
+6. Watch the step-by-step progress as the LLM selects MCPs, generates a constitution,
+   and creates initial skills
+7. When done, click **Go to Dashboard** or **Run a Task**
+
+#### Via CLI
 
 ```bash
 python main.py bootstrap \
@@ -42,6 +114,19 @@ python main.py bootstrap \
 1. LLM selects MCPs from the catalog (e.g., picks `github`, `filesystem`, `terminal`)
 2. LLM generates a constitution (immutable rules) and 5 initial skills
 3. Everything is written to `agent/` directory and `agent/db/agent.db`
+
+**Custom MCPs (CLI only):** Create a JSON file and pass it:
+```bash
+python main.py bootstrap -d "your agent description" -m path/to/my-mcps.json
+```
+
+MCP JSON format:
+```json
+[
+  {"name": "github", "description": "Read/write GitHub repos, PRs, issues"},
+  {"name": "jira", "description": "Read/write Jira tickets"}
+]
+```
 
 **Outputs:**
 ```
@@ -59,27 +144,32 @@ agent/
     agent.db                 # SQLite — all state
 ```
 
-**Custom MCPs:** Create a JSON file with your MCPs and pass it:
-```bash
-python main.py bootstrap \
-  -d "your agent description" \
-  -m path/to/my-mcps.json
-```
-
-MCP JSON format:
-```json
-[
-  {"name": "github", "description": "Read/write GitHub repos, PRs, issues"},
-  {"name": "jira", "description": "Read/write Jira tickets"}
-]
-```
-
 ---
 
 ### Step 2: Run a Task
 
 The orchestrator runs the full per-task loop: skill selection, execution,
 recording, analysis, and evolution.
+
+#### Via Dashboard
+
+1. Click **Run Task** in the nav bar (or the button on the dashboard)
+2. Type your task in the textarea — or click one of the example buttons to try a preset
+3. Click **Execute Task**
+4. Watch real-time step progress:
+   - **Selecting skills** — quality filter + LLM picks relevant skills
+   - **Executing task** — agent runs with constitution + skills injected
+   - **Recording artifacts** — conversation, tool trace, metadata saved
+   - **Analyzing execution** — LLM reviews what happened (Trigger 1)
+   - **Running evolutions** — FIX/DERIVED/CAPTURED suggestions processed
+5. When done, see the results:
+   - Task completion status
+   - Stats: skills used, suggestions, evolutions, feature requests
+   - Evolution details with success/failure for each
+6. Click **View Run Details** to see the full execution trace, or
+   **Review Evolutions** to approve/reject pending skill changes
+
+#### Via CLI
 
 ```bash
 python main.py run \
@@ -115,7 +205,7 @@ python main.py run \
    - **CAPTURED**: Extracts a novel pattern as a brand-new skill
    - All evolved skills land as `status=pending` — they need human approval
 
-**Output example:**
+**CLI output example:**
 ```
 ✅ Task complete. Run ID: run_5370798b
   📁 Recording: recordings/run_5370798b/
@@ -137,42 +227,21 @@ python main.py run \
 
 ---
 
-### Step 3: Review & Approve (Dashboard)
+### Step 3: Review & Approve
 
-Start the dashboard server:
+After tasks run and produce evolution suggestions, a human reviews them.
 
-```bash
-# Production (serves built frontend)
-cd frontend && npm run build && cd ..
-uvicorn src.dashboard.server:app --port 7788
-# Visit http://localhost:7788
-
-# Development (hot reload)
-uvicorn src.dashboard.server:app --port 7788 &
-cd frontend && npm run dev
-# Visit http://localhost:5173
-```
-
-**Dashboard pages:**
-
-| Page | URL | What to do |
-|------|-----|------------|
-| Dashboard | `/dashboard` | Overview: metrics, pipeline, top skills, recent runs |
-| Skills | `/skills` | Browse all skills, filter by status, search |
-| Skill Detail | `/skills/:id` | View skill content, quality metrics, version history |
-| Runs | `/runs` | See all task executions |
-| Run Detail | `/runs/:id` | Timeline of what the agent did, skill judgments, analysis |
-| **Review Queue** | `/review` | **Approve or reject pending evolutions** |
-| Constitution | `/constitution` | View/edit the immutable rules |
-
-**Review workflow:**
-1. Go to `/review`
-2. Click a pending evolution in the left panel
-3. Review the diff (what changed vs. the parent skill)
-4. Read the direction (why it was suggested)
-5. Click **Approve** (green) or **Reject** (red, with reason)
-6. On approval: old skill → superseded, new skill → active
-7. On rejection: old skill stays active, new skill marked rejected
+1. Go to `/review` in the dashboard
+2. The left panel shows pending evolutions, sorted by priority (critical → low)
+3. Click an item to see:
+   - The direction (why this evolution was suggested)
+   - The diff viewer (what changed vs. the parent skill)
+   - Recurrence count (how many times this pattern was seen)
+4. Click **Approve** (green) or **Reject** (red, with reason)
+5. On approval: old skill → superseded, new skill → active
+6. On rejection: old skill stays active, new skill marked rejected
+7. Below evolutions: **Feature Requests** — capability gaps the agent can't fill.
+   Accept, defer, or dismiss them.
 
 ---
 
@@ -184,17 +253,49 @@ Each task run:
 - Skills that get applied successfully build up quality scores
 - Recurring patterns get auto-escalated in priority
 
-```bash
-# Run several tasks to build up skill quality data
-python main.py run -t "Check this Flask endpoint for XSS: return render_template_string(request.args['name'])"
-python main.py run -t "Review this code for hardcoded credentials: db_password = 'admin123'"
-python main.py run -t "Analyze test coverage for this PR that adds a new API endpoint"
+Run several tasks from the dashboard to see the improvement loop:
+
+```
+"Check this Flask endpoint for XSS: return render_template_string(request.args['name'])"
+"Review this code for hardcoded credentials: db_password = 'admin123'"
+"Analyze test coverage for this PR that adds a new API endpoint"
+"Review this Node.js code for path traversal: fs.readFile(req.query.path)"
 ```
 
-Check agent status any time:
-```bash
-python main.py status
-```
+Check agent status any time: `python main.py status` or visit `/dashboard`.
+
+---
+
+## Dashboard Pages
+
+| Page | URL | What it shows |
+|------|-----|---------------|
+| Dashboard | `/dashboard` | Metrics, pipeline diagram, top skills, recent runs. Welcome screen + create CTA when no agent exists. |
+| **Create Agent** | `/create` | Agent description form, MCP toggle list, live bootstrap progress with step tracking |
+| **Run Task** | `/run` | Task input with examples, live execution progress, results with evolution details |
+| Skills Library | `/skills` | All skills with filter/sort/search, score bars |
+| Skill Detail | `/skills/:id` | Quality metrics, SKILL.md content, version lineage, judgments |
+| Runs | `/runs` | Execution list with status badges and skill tags |
+| Run Detail | `/runs/:id` | Timeline, Skills Used, Analysis tabs |
+| Review Queue | `/review` | Priority-sorted pending evolutions, diff viewer, approve/reject, feature requests |
+| Constitution | `/constitution` | Rendered markdown, inline editor, version history |
+
+---
+
+## API Endpoints for Agent Operations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/agent/status` | Check if agent is bootstrapped, get config |
+| GET | `/api/v1/agent/mcps` | Get default MCP catalog |
+| POST | `/api/v1/agent/bootstrap` | Start bootstrap (returns job ID) |
+| POST | `/api/v1/agent/run` | Start task run (returns job ID) |
+| GET | `/api/v1/agent/jobs/{id}` | Poll job status with step-level progress |
+| GET | `/api/v1/agent/jobs` | List recent jobs |
+
+Bootstrap and run operations execute in background threads. The frontend polls
+`/agent/jobs/{id}` every 2 seconds to update the step progress UI. Steps track
+real LangGraph node execution via `stream_mode="updates"`.
 
 ---
 
@@ -251,59 +352,68 @@ Skills with poor metrics are:
 ## Architecture Diagram
 
 ```
-python main.py bootstrap -d "..."
+   Browser / CLI
         │
         ▼
-┌─ META-AGENT (LangGraph) ────────────┐
-│  select_mcps → generate_bootstrap    │
-│  → persist_artifacts                 │
-└──────────────────────────────────────┘
+┌─ DASHBOARD (FastAPI + React) ──────────────────────┐
+│  /create   — bootstrap agent from browser           │
+│  /run      — run tasks from browser                 │
+│  /review   — approve/reject evolutions              │
+│  /skills   — browse skill library                   │
+│  /runs     — execution traces                       │
+│  Background jobs with step-level polling             │
+└────────────────────────────────────────────────────-┘
+        │
+        ▼
+┌─ META-AGENT (LangGraph) ──────────────────────────-┐
+│  select_mcps → generate_bootstrap → persist          │
+│  Runs once at agent creation                         │
+└─────────────────────────────────────────────────────┘
         │
         ▼  (repeat per task)
-python main.py run -t "..."
+┌─ ORCHESTRATOR (LangGraph) ─────────────────────────┐
+│  init_run → select_skills → build_prompt             │
+│  → execute_task → record_artifacts                   │
+│  → trigger1_analysis → evolution                     │
+│  Step progress streamed via LangGraph updates        │
+└─────────────────────────────────────────────────────┘
         │
         ▼
-┌─ ORCHESTRATOR (LangGraph) ──────────┐
-│  init_run → select_skills            │
-│  → build_prompt → execute_task       │
-│  → record_artifacts                  │
-│  → trigger1_analysis                 │
-│  → evolution  ◄── NEW               │
-└──────────────────────────────────────┘
-        │
-        ▼
-┌─ EVOLUTION ENGINE (LangGraph) ──────┐
-│  build_prompt → call_llm             │
-│  → parse_output → validate           │
-│  → [retry | persist | fail]          │
-│  All results: status=pending         │
-└──────────────────────────────────────┘
-        │
-        ▼
-┌─ DASHBOARD (FastAPI + React) ───────┐
-│  /review — approve/reject evolutions │
-│  /skills — browse skill library      │
-│  /runs   — execution traces          │
-└──────────────────────────────────────┘
+┌─ EVOLUTION ENGINE (LangGraph) ─────────────────────┐
+│  build_prompt → call_llm → parse_output → validate   │
+│  → [retry | persist | fail]                          │
+│  All results: status=pending                         │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Troubleshooting
 
-**"No agent found"** — Run `python main.py bootstrap` first.
+**"No agent found"** — Visit `/create` in the dashboard or run `python main.py bootstrap`.
+
+**"A bootstrap is already running" / "A task is already running"** — Only one
+bootstrap or task can run at a time. Wait for it to finish or restart the server.
 
 **Evolution fails** — Check the error reason in the output. Common causes:
 - LLM returned `<EVOLUTION_FAILED>` (determined the change wasn't worthwhile)
 - SKILL.md validation failed (missing frontmatter) after 3 retries
 
-**Empty tool list** — Currently the execution agent runs without MCP tools.
-To add tools, pass them via the `tools` parameter in `run_task()`.
+**Empty tool list / "[mcp] Skipping 'X' MCP"** — Means the env var for that
+MCP server isn't set. Add it to `.env` or export it in your shell. See the
+**MCP Tools** section for the required variables. The task still runs; it
+just won't have those tools available.
+
+**`npx: command not found`** — Install Node.js: `brew install node`.
+The github and search MCP servers are launched via `npx` stdio.
 
 **LangSmith not working** — Ensure `LANGSMITH_API_KEY` is valid and
 `LANGSMITH_TRACING=true` is set before starting.
 
 **Port in use** — `lsof -ti :7788 | xargs kill -9` to free the port.
+
+**Frontend not loading** — Make sure you built it: `cd frontend && npm run build`.
+Or use dev mode: `cd frontend && npm run dev` (requires API server on :7788).
 
 ---
 

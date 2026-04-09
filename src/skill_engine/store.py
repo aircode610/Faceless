@@ -6,6 +6,7 @@ SQLite storage for skills, runs, and evolution state.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -24,7 +25,15 @@ def _short_id() -> str:
 class SkillStore:
     def __init__(self, db_path: str):
         self.db_path = db_path
-        self.conn = sqlite3.connect(db_path)
+        # Ensure parent directory exists — the DB file is created on first
+        # connect, but sqlite3.connect will fail if the directory is missing.
+        parent = os.path.dirname(db_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        # check_same_thread=False allows reuse across FastAPI's threadpool
+        # workers; each request still gets its own connection via the
+        # dependency, so no cursor races either.
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self._init_schema()
 
@@ -90,6 +99,7 @@ class SkillStore:
                 target_skill_ids TEXT,
                 category TEXT,
                 direction TEXT NOT NULL,
+                reason TEXT,
                 priority TEXT DEFAULT 'medium',
                 pattern_key TEXT,
                 recurrence_count INTEGER DEFAULT 1,
@@ -150,6 +160,20 @@ class SkillStore:
             );
         """)
         self.conn.commit()
+        self._run_migrations()
+
+    def _run_migrations(self):
+        """Idempotent schema migrations for existing DBs."""
+        # Add reason column to evolution_suggestions if missing
+        cols = [
+            row[1] for row in
+            self.conn.execute("PRAGMA table_info(evolution_suggestions)").fetchall()
+        ]
+        if "reason" not in cols:
+            self.conn.execute(
+                "ALTER TABLE evolution_suggestions ADD COLUMN reason TEXT"
+            )
+            self.conn.commit()
 
     # ── Skills CRUD ──────────────────────────────────
 
@@ -270,14 +294,16 @@ class SkillStore:
         self.conn.execute(
             """INSERT INTO evolution_suggestions
                (id, run_id, trigger, type, target_skill_ids, category,
-                direction, priority, pattern_key, run_ids, created_at, last_seen)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                direction, reason, priority, pattern_key, run_ids,
+                created_at, last_seen)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 evo_id, run_id, trigger,
                 suggestion.get("type", "fix"),
                 json.dumps(suggestion.get("target_skills", [])),
                 suggestion.get("category", "workflow"),
                 suggestion.get("direction", ""),
+                suggestion.get("reason", ""),
                 suggestion.get("priority", "medium"),
                 suggestion.get("pattern_key", ""),
                 json.dumps([run_id] if run_id else []),

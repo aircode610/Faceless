@@ -60,6 +60,19 @@ Analyze the execution and produce a JSON report:
 6. **feature_requests**: Genuine capability gaps (NOT skill quality problems).
 
 For each evolution_suggestion include:
+- "direction": the instruction to the evolution engine — WHAT to change (imperative).
+  Example: "Add a step for checking raw string interpolation in f-strings."
+
+- "reason": the justification for the change — WHY it's needed, grounded in
+  concrete evidence from THIS task's conversation log and tool trace.
+  State what the agent actually did (or failed to do), cite specific
+  observations from the execution. This is what a human reviewer will read
+  when deciding whether to approve.
+  Example: "During this run the agent reviewed an f-string SQL query but
+  flagged only the parameterized queries, missing the f-string interpolation
+  at line 23 of the diff. Without this step, future reviews will continue
+  to miss f-string injection — a common Python-specific bypass."
+
 - "priority": "critical" | "high" | "medium" | "low"
   critical = security gap or blocks core function
   high     = recurring pattern or significant user-facing miss
@@ -83,7 +96,8 @@ Output JSON:
       "type": "fix",
       "target_skills": ["..."],
       "category": "workflow",
-      "direction": "...",
+      "direction": "WHAT to change (imperative)",
+      "reason": "WHY — concrete evidence from THIS run's trace",
       "priority": "high",
       "pattern_key": "harden.sql-injection-fstring"
     }}

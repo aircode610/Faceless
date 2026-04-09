@@ -42,13 +42,17 @@ def get_review_queue(store: SkillStore = Depends(get_store)):
             data["pattern_key"] = evo.get("pattern_key")
             data["recurrence_count"] = evo.get("recurrence_count", 1)
             data["direction"] = evo.get("direction", "")
+            data["reason"] = evo.get("reason", "") or ""
             data["evolution_type"] = evo.get("type", "fix")
+            data["source_run_id"] = evo.get("run_id")
         else:
             data["priority"] = "medium"
             data["pattern_key"] = None
             data["recurrence_count"] = 1
             data["direction"] = ""
+            data["reason"] = ""
             data["evolution_type"] = "fix"
+            data["source_run_id"] = None
 
         data["content_diff"] = skill.content_diff
         data["parent_content_snapshot"] = None
@@ -141,7 +145,9 @@ def get_review_detail(skill_id: str, store: SkillStore = Depends(get_store)):
         data["pattern_key"] = evo.get("pattern_key")
         data["recurrence_count"] = evo.get("recurrence_count", 1)
         data["direction"] = evo.get("direction", "")
+        data["reason"] = evo.get("reason", "") or ""
         data["evolution_type"] = evo.get("type", "fix")
+        data["source_run_id"] = evo.get("run_id")
 
     return data
 

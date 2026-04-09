@@ -7,6 +7,8 @@ import RunsPage from "./pages/RunsPage";
 import RunDetailPage from "./pages/RunDetailPage";
 import ReviewQueuePage from "./pages/ReviewQueuePage";
 import ConstitutionPage from "./pages/ConstitutionPage";
+import CreateAgentPage from "./pages/CreateAgentPage";
+import RunTaskPage from "./pages/RunTaskPage";
 
 export default function App() {
   return (
@@ -14,6 +16,8 @@ export default function App() {
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/create" element={<CreateAgentPage />} />
+          <Route path="/run" element={<RunTaskPage />} />
           <Route path="/skills" element={<SkillsPage />} />
           <Route path="/skills/:skillId" element={<SkillDetailPage />} />
           <Route path="/runs" element={<RunsPage />} />

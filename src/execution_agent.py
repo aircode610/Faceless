@@ -3,17 +3,17 @@
 The execution agent: performs the actual task using its tools and skills.
 It knows nothing about evolution, approval, or the skill engine.
 It simply does its job, wearing the face it was given.
+
+Nodes are async so that MCP-backed tools (which are async-only via
+langchain-mcp-adapters) can be awaited directly.
 """
 
 from __future__ import annotations
 
-import json
-import os
+import asyncio
 import time
-import uuid
-from typing import Annotated, Any, TypedDict
+from typing import Any, TypedDict
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -23,7 +23,8 @@ from langchain_core.messages import (
 )
 from langgraph.graph import END, START, MessagesState, StateGraph
 
-from src.config import LLM_MODEL, LLM_TEMPERATURE, MAX_EXECUTION_ITERATIONS
+from src.config import MAX_EXECUTION_ITERATIONS
+from src.llm import get_llm
 
 
 class ExecutionState(MessagesState):
@@ -38,11 +39,21 @@ class ExecutionState(MessagesState):
     tools_used: set
 
 
+def _safe_str(value: Any, limit: int = 4000) -> str:
+    try:
+        s = str(value)
+    except Exception:
+        s = repr(value)
+    if len(s) > limit:
+        return s[:limit] + f"\n... [truncated, full length {len(s)}]"
+    return s
+
+
 def build_execution_agent(tools: list | None = None):
     """
     Build a LangGraph execution agent.
 
-    The agent runs an LLM loop with optional tools, terminating when:
+    The agent runs an async LLM loop with optional tools, terminating when:
       - The LLM outputs content containing <COMPLETE>
       - Max iterations reached
       - No tool calls and no completion signal (natural end)
@@ -50,18 +61,18 @@ def build_execution_agent(tools: list | None = None):
     tools = tools or []
     tools_by_name = {t.name: t for t in tools}
 
-    llm = init_chat_model(LLM_MODEL, temperature=LLM_TEMPERATURE)
+    llm = get_llm()
     if tools:
         llm_with_tools = llm.bind_tools(tools)
     else:
         llm_with_tools = llm
 
-    def call_llm(state: ExecutionState) -> dict:
+    async def call_llm(state: ExecutionState) -> dict:
         """LLM decides what to do next."""
         iteration = state.get("iteration", 0) + 1
         system = SystemMessage(content=state["system_prompt"])
 
-        response = llm_with_tools.invoke([system] + state["messages"])
+        response = await llm_with_tools.ainvoke([system] + state["messages"])
 
         # Record conversation
         conv_log = list(state.get("conversation_log", []))
@@ -83,8 +94,12 @@ def build_execution_agent(tools: list | None = None):
             "conversation_log": conv_log,
         }
 
-    def call_tools(state: ExecutionState) -> dict:
-        """Execute tool calls from the last LLM message."""
+    async def call_tools(state: ExecutionState) -> dict:
+        """Execute tool calls from the last LLM message.
+
+        Uses `ainvoke` so it works for both sync tools and async-only tools
+        (e.g. those produced by langchain-mcp-adapters).
+        """
         last_message = state["messages"][-1]
         results = []
         tool_trace = list(state.get("tool_trace", []))
@@ -100,9 +115,11 @@ def build_execution_agent(tools: list | None = None):
             error_msg = None
 
             try:
-                tool = tools_by_name[tool_name]
-                observation = tool.invoke(tool_call["args"])
-                content = str(observation)
+                tool = tools_by_name.get(tool_name)
+                if tool is None:
+                    raise RuntimeError(f"Unknown tool: {tool_name}")
+                observation = await tool.ainvoke(tool_call["args"])
+                content = _safe_str(observation)
             except Exception as e:
                 content = f"Error: {e}"
                 success = False
@@ -178,8 +195,8 @@ def run_execution_agent(
     """
     Run the execution agent and return its final state.
 
-    Returns dict with: messages, conversation_log, tool_trace, tools_used,
-                       iteration, task_complete
+    The agent's nodes are async, so we dispatch via `ainvoke` wrapped in a
+    fresh asyncio event loop. Callers don't need to care about async/sync.
     """
     agent = build_execution_agent(tools=tools)
 
@@ -196,5 +213,20 @@ def run_execution_agent(
         "tools_used": set(),
     }
 
-    final_state = agent.invoke(initial_state)
+    try:
+        final_state = asyncio.run(agent.ainvoke(initial_state))
+    except RuntimeError:
+        # Already inside an event loop — run in a dedicated thread.
+        import threading
+        result: dict = {}
+
+        def _runner():
+            nonlocal result
+            result = asyncio.run(agent.ainvoke(initial_state))
+
+        t = threading.Thread(target=_runner)
+        t.start()
+        t.join()
+        final_state = result
+
     return final_state

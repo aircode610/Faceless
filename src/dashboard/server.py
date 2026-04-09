@@ -7,14 +7,32 @@ Run: uvicorn src.dashboard.server:app --host 0.0.0.0 --port 7788 --reload
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+# ── Load .env BEFORE any other imports ──────────────
+# Critical: this must run before anything that reads env vars (including
+# LangSmith tracing init inside langchain-core).
+from dotenv import load_dotenv
+load_dotenv()
+
+# LangChain's tracing still looks at the LANGCHAIN_* namespace in some
+# code paths, so mirror the LANGSMITH_* variables across for compatibility.
+for src_key, dst_key in [
+    ("LANGSMITH_TRACING", "LANGCHAIN_TRACING_V2"),
+    ("LANGSMITH_API_KEY", "LANGCHAIN_API_KEY"),
+    ("LANGSMITH_ENDPOINT", "LANGCHAIN_ENDPOINT"),
+    ("LANGSMITH_PROJECT", "LANGCHAIN_PROJECT"),
+]:
+    if os.environ.get(src_key) and not os.environ.get(dst_key):
+        os.environ[dst_key] = os.environ[src_key]
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from src.dashboard.routes import audit, constitution, overview, review, runs, skills
+from src.dashboard.routes import agent, audit, constitution, overview, review, runs, skills
 
 app = FastAPI(
     title="Faceless — Agent Dashboard",
@@ -32,6 +50,7 @@ app.add_middleware(
 )
 
 # ── API Routes ───────────────────────────────────────
+app.include_router(agent.router, prefix="/api/v1", tags=["agent"])
 app.include_router(overview.router, prefix="/api/v1", tags=["overview"])
 app.include_router(skills.router, prefix="/api/v1", tags=["skills"])
 app.include_router(review.router, prefix="/api/v1", tags=["review"])

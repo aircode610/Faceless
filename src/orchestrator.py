@@ -34,6 +34,7 @@ from src.skill_engine.analyzer import analyze_run
 from src.skill_engine.evolver import process_pending_evolutions
 from src.skill_engine.registry import select_skills
 from src.skill_engine.store import SkillStore
+from src.tools.loader import load_tools_for_agent
 
 
 # ── State ────────────────────────────────────────────
@@ -294,12 +295,21 @@ def run_task(
 
     Args:
         task_description: What the agent should do.
-        tools: Optional list of LangChain tool objects to mount.
+        tools: Optional list of LangChain tool objects to mount. If None,
+               tools are auto-loaded from the agent's selected MCPs via
+               langchain-mcp-adapters.
 
     Returns:
         Final orchestrator state with execution results and analysis.
     """
     orchestrator = create_orchestrator()
+
+    # Auto-load MCP tools if the caller didn't pass any
+    if tools is None:
+        tools = load_tools_for_agent()
+        if tools:
+            print(f"[orchestrator] Loaded {len(tools)} MCP tools: "
+                  f"{[t.name for t in tools]}")
 
     result = orchestrator.invoke({
         "task_description": task_description,

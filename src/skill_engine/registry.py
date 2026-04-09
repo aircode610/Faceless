@@ -5,15 +5,13 @@ Skill selection: quality pre-filter + LLM selection.
 
 from __future__ import annotations
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 
 from src.config import (
-    LLM_MODEL,
-    LLM_TEMPERATURE,
     MAX_SKILLS_PER_TASK,
     QUALITY_FILTER_MIN_SELECTIONS,
 )
+from src.llm import get_llm
 from src.prompts.skill_engine_prompts import SKILL_SELECTION_TEMPLATE
 from src.skill_engine.store import SkillStore
 from src.skill_engine.types import SkillRecord, SkillSelectionResult
@@ -84,7 +82,7 @@ def select_skills(
 
     catalog_str = _format_catalog(filtered)
 
-    llm = init_chat_model(LLM_MODEL, temperature=LLM_TEMPERATURE)
+    llm = get_llm()
     structured_llm = llm.with_structured_output(SkillSelectionResult)
 
     prompt = SKILL_SELECTION_TEMPLATE.format(

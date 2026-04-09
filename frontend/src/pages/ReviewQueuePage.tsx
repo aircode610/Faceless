@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchQueue, approveSkill, rejectSkill, fetchFeatures, acceptFeature, deferFeature, dismissFeature } from "../api/review";
 import type { ReviewItem, FeatureRequest } from "../api/types";
 import PriorityBadge from "../components/PriorityBadge";
@@ -80,6 +81,11 @@ export default function ReviewQueuePage() {
                 {item.pattern_key && (
                   <div className="text-[10px] font-mono mt-1" style={{ color: "var(--color-muted)" }}>{item.pattern_key}</div>
                 )}
+                {item.reason && (
+                  <div className="text-xs mt-1.5 italic line-clamp-2" style={{ color: "var(--color-muted)" }}>
+                    "{item.reason}"
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mt-1 text-xs" style={{ color: "var(--color-muted)" }}>
                   {item.recurrence_count >= 2 && (
                     <span className="text-orange-600 font-medium">Seen {item.recurrence_count}× ▲</span>
@@ -136,6 +142,36 @@ export default function ReviewQueuePage() {
                 <EvolutionTypeBadge type={selected.evolution_type || "fix"} />
                 <span className="font-semibold">{selected.name}</span>
               </div>
+
+              {/* Reason — WHY this evolution, grounded in trace evidence */}
+              {selected.reason && (
+                <div
+                  className="p-3 rounded-lg border-l-4"
+                  style={{
+                    background: "#fef7f0",
+                    borderLeftColor: "var(--color-primary)",
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide"
+                          style={{ color: "var(--color-primary)" }}>
+                      Why this change?
+                    </span>
+                    {selected.source_run_id && (
+                      <Link
+                        to={`/runs/${selected.source_run_id}`}
+                        className="text-[10px] px-1.5 py-0.5 rounded-full bg-white border hover:bg-gray-50"
+                        style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+                      >
+                        view source run →
+                      </Link>
+                    )}
+                  </div>
+                  <div className="text-sm leading-relaxed" style={{ color: "var(--color-ink)" }}>
+                    {selected.reason}
+                  </div>
+                </div>
+              )}
 
               {selected.direction && (
                 <div className="text-sm p-3 rounded-lg" style={{ background: "var(--color-bg-page)" }}>

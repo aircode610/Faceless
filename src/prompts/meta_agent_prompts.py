@@ -27,7 +27,7 @@ Output JSON:
 
 
 BOOTSTRAP_TEMPLATE = """\
-You are bootstrapping a specialized autonomous agent.
+You are bootstrapping a specialized autonomous agent. Be concise — shorter skills are better.
 
 ## Agent's Job
 {user_description}
@@ -37,54 +37,37 @@ You are bootstrapping a specialized autonomous agent.
 
 ## Your Job
 
-1. Write a constitution.md — the agent's purpose in 2-3 sentences, plus 3-8 hard constraints
-   it must never violate. These are immutable — the evolution system can never change them.
+1. **constitution**: a short markdown document (≤ 800 chars) with:
+   - 2-3 sentences describing the agent's purpose
+   - 3-5 hard constraints it must never violate
 
-2. Write {num_skills} initial skills. Each skill is a directory with a SKILL.md file.
+2. **skills**: exactly {num_skills} focused skills. Keep each SKILL.md ≤ 1500 chars.
 
-SKILL.md format:
+Each skill must be a single SKILL.md string formatted like this:
+
 ---
 name: skill-name-lowercase-hyphens
 description: >
-  [CRITICAL] Write this as if convincing another agent to use this skill.
-  State WHAT the skill does AND the SPECIFIC CONTEXTS in which to use it.
-  Be explicit about triggers. Example: "Use this skill whenever reviewing any
-  PR that touches database queries, ORM models, or raw SQL — even if the PR
-  description does not mention SQL injection."
-category: workflow | tool_guide | reference
+  [CRITICAL] Convince another agent to pick this skill. State WHAT it does
+  AND the SPECIFIC CONTEXTS that should trigger it. Be explicit about triggers
+  (file types, patterns, keywords).
+category: workflow
 ---
 
 # Skill Title
 
 ## Purpose
-Why this skill exists and what problem it solves for the agent.
+Why this skill exists (1-2 sentences).
 
 ## When to Apply
-Specific task contexts, file types, PR patterns, or signals that should trigger this skill.
+Specific triggers — file types, patterns, keywords.
 
 ## Instructions
-Step-by-step procedures, tool usage patterns, or reference knowledge.
-Explain WHY each step matters, not just what to do.
-If a step requires a script, name it and describe what it does — put the script in scripts/.
+3-6 numbered steps. Explain the WHY briefly where non-obvious.
 
-3. For skills that require a reusable script or reference doc, list the additional files
-   to create alongside the SKILL.md.
+Category must be one of: workflow | tool_guide | reference.
 
-Output JSON:
-{{
-  "constitution": "full constitution.md content",
-  "skills": [
-    {{
-      "name": "check-sql-injection",
-      "category": "workflow",
-      "content": "full SKILL.md content",
-      "scripts": [
-        {{"filename": "scripts/check_interpolation.py", "content": "..."}}
-      ],
-      "references": [
-        {{"filename": "references/owasp-injection.md", "content": "..."}}
-      ]
-    }}
-  ]
-}}
+Important: output ONLY the three fields (name, category, content) per skill.
+Do NOT include any scripts or references arrays — those are added later
+through the evolution system. Keep it lean.
 """

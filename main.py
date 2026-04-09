@@ -30,19 +30,7 @@ os.environ["LANGSMITH_PROJECT"] = os.environ.get("LANGSMITH_PROJECT", "faceless"
 
 from src.meta_agent import bootstrap_agent
 from src.orchestrator import run_task
-
-
-# ── Default MCP catalog (for demo) ──────────────────
-
-DEFAULT_MCPS = [
-    {"name": "github", "description": "Read/write GitHub repos, PRs, issues, reviews"},
-    {"name": "trello", "description": "Read/write Trello boards and cards"},
-    {"name": "search", "description": "Web search via Tavily"},
-    {"name": "sqlite", "description": "Query local SQLite databases"},
-    {"name": "slack", "description": "Post messages to Slack channels"},
-    {"name": "filesystem", "description": "Read/write local files and directories"},
-    {"name": "terminal", "description": "Execute shell commands"},
-]
+from src.tools.loader import get_mcp_catalog
 
 FACELESS_BANNER = r"""
     ⚔️  FACELESS — A Man Has No Name  ⚔️
@@ -59,7 +47,7 @@ def cmd_bootstrap(args):
     print("🏛️  The House of Black and White opens its doors...\n")
 
     description = args.description
-    mcps = DEFAULT_MCPS
+    mcps = get_mcp_catalog()
 
     if args.mcps:
         with open(args.mcps) as f:

@@ -34,7 +34,9 @@ export interface ReviewItem extends Skill {
   pattern_key: string | null;
   recurrence_count: number;
   direction: string;
+  reason: string;
   evolution_type: string;
+  source_run_id: string | null;
 }
 
 export interface FeatureRequest {

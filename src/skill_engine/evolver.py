@@ -14,7 +14,6 @@ import os
 import re
 from typing import TypedDict
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 
@@ -23,10 +22,9 @@ from src.config import (
     DB_PATH,
     EVOLUTION_MAX_APPLY_ATTEMPTS,
     EVOLUTION_MAX_ITERATIONS,
-    LLM_MODEL,
-    LLM_TEMPERATURE,
     SKILLS_DIR,
 )
+from src.llm import get_llm
 from src.prompts.skill_engine_prompts import (
     CONSTITUTION_BLOCK,
     EVOLUTION_CAPTURED_TEMPLATE,
@@ -262,7 +260,7 @@ def call_llm_node(state: EvolutionState) -> dict:
             f"ending with <EVOLUTION_COMPLETE>."
         )
 
-    llm = init_chat_model(LLM_MODEL, temperature=LLM_TEMPERATURE)
+    llm = get_llm()
     response = llm.invoke([HumanMessage(content=prompt)])
     raw = response.content if isinstance(response.content, str) else str(response.content)
 
