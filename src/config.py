@@ -29,12 +29,12 @@ MAX_SKILL_CONTENT_CHARS = 8_000
 
 # ── Trigger 2 — tool degradation ────────────────────
 TOOL_DEGRADED_RATE = 0.5
-TOOL_MIN_CALLS = 5
+TOOL_MIN_CALLS = 3
 TOOL_ROLLING_WINDOW = 100
 
 # ── Trigger 3 — health check ────────────────────────
-METRIC_CHECK_EVERY_N_EXECUTIONS = 5
-METRIC_MIN_SELECTIONS_TO_EVALUATE = 5
+METRIC_CHECK_EVERY_N_EXECUTIONS = 3
+METRIC_MIN_SELECTIONS_TO_EVALUATE = 3
 FALLBACK_THRESHOLD = 0.40
 HIGH_APPLIED_FOR_FIX = 0.40
 LOW_COMPLETION_THRESHOLD = 0.35
@@ -56,7 +56,7 @@ FEATURE_REQUEST_AUTO_ACCEPT = False
 BENCHMARK_PASS_THRESHOLD = 0.80
 
 # ── Execution ────────────────────────────────────────
-MAX_EXECUTION_ITERATIONS = 15
+MAX_EXECUTION_ITERATIONS = 20
 
 # ── Bootstrap ────────────────────────────────────────
 # Number of initial skills the meta-agent should generate. Keep this small

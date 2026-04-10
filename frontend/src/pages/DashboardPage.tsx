@@ -60,10 +60,10 @@ export default function DashboardPage() {
 
       {/* Metrics */}
       <div className="metrics-row">
-        <MetricCard label="Active Skills" value={data.total_skills} />
-        <MetricCard label="Avg Score" value={`${data.avg_score}%`} />
-        <MetricCard label="Total Runs" value={data.total_runs} />
-        <MetricCard label="Pending Approvals" value={data.pending_approvals} />
+        <MetricCard label="Active Skills" value={data.total_skills} tip="Skills currently in the agent's library that can be selected for tasks" />
+        <MetricCard label="Avg Score" value={`${data.avg_score}%`} tip="Average quality score across all active skills, based on how often they're applied and lead to successful completions" />
+        <MetricCard label="Total Runs" value={data.total_runs} tip="Number of tasks the agent has executed so far" />
+        <MetricCard label="Pending Approvals" value={data.pending_approvals} tip="Evolved skills waiting for human review before they go live" />
       </div>
 
       {/* Pipeline */}

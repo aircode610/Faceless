@@ -6,6 +6,7 @@ import { fetchRunDetail } from "../api/runs";
 import type { RunDetail } from "../api/types";
 import TraceTimeline from "../components/TraceTimeline";
 import PriorityBadge from "../components/PriorityBadge";
+import InfoTip from "../components/InfoTip";
 import { timeAgo } from "../utils/format";
 
 type Tab = "result" | "timeline" | "skills" | "analysis";
@@ -105,15 +106,15 @@ export default function RunDetailPage() {
             <div className="grid grid-cols-3 gap-3 pt-2">
               <div className="text-center p-3 rounded-lg" style={{ background: "var(--color-bg-page)" }}>
                 <div className="text-lg font-semibold" style={{ color: "var(--color-ink)" }}>{run.iterations}</div>
-                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Iterations</div>
+                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Iterations <InfoTip text="Number of think-act cycles the agent went through. Each iteration the agent reasons, optionally calls a tool, and decides whether to continue." size={12} /></div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ background: "var(--color-bg-page)" }}>
                 <div className="text-lg font-semibold" style={{ color: "var(--color-ink)" }}>{run.trajectory.length}</div>
-                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Tool Calls</div>
+                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Tool Calls <InfoTip text="External tools (MCP servers like GitHub, search) the agent invoked during this run." size={12} /></div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ background: "var(--color-bg-page)" }}>
                 <div className="text-lg font-semibold" style={{ color: "var(--color-ink)" }}>{run.skill_judgments.length}</div>
-                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Skills Used</div>
+                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Skills Used <InfoTip text="Skills that were selected and injected into the agent's prompt for this task." size={12} /></div>
               </div>
             </div>
           </div>
@@ -155,7 +156,10 @@ export default function RunDetailPage() {
 
             {run.evolution_suggestions.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold mb-2">Evolution Suggestions</h3>
+                <h3 className="text-sm font-semibold mb-2">
+                  Evolution Suggestions
+                  <InfoTip text="Improvements the system proposed after analyzing this run. FIX = repair a broken skill, DERIVED = create an enhanced version, CAPTURED = extract a new skill from a pattern discovered during execution." />
+                </h3>
                 <div className="space-y-2">
                   {run.evolution_suggestions.map((e) => (
                     <div key={e.id} className="record-card">

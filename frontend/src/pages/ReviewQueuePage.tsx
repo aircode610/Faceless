@@ -6,6 +6,7 @@ import type { ReviewItem, FeatureRequest } from "../api/types";
 import PriorityBadge from "../components/PriorityBadge";
 import EvolutionTypeBadge from "../components/EvolutionTypeBadge";
 import TriggerBadge from "../components/TriggerBadge";
+import InfoTip from "../components/InfoTip";
 import DiffViewer from "../components/DiffViewer";
 import { timeAgo } from "../utils/format";
 
@@ -70,6 +71,7 @@ export default function ReviewQueuePage() {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-muted)" }}>
               Pending Evolutions ({queue.length})
+              <InfoTip text="Skills that the system proposed to improve. Each one needs human approval before going live. They can be a FIX (repair), DERIVED (enhancement), or CAPTURED (new skill)." />
             </h2>
             {queue.map((item) => (
               <div
@@ -114,6 +116,7 @@ export default function ReviewQueuePage() {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-muted)" }}>
               Feature Requests ({features.filter((f) => f.status === "pending").length})
+              <InfoTip text="Capability gaps the agent identified during execution — tasks it couldn't handle because no relevant skill exists. Accepting one signals that a new skill should be created." />
             </h2>
             {features.filter((f) => f.status === "pending").map((feat) => (
               <div key={feat.id} className="record-card">

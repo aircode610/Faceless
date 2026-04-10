@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchSkills } from "../api/skills";
 import type { Skill } from "../api/types";
 import EvolutionTypeBadge from "../components/EvolutionTypeBadge";
+import InfoTip from "../components/InfoTip";
 import { pct } from "../utils/format";
 
 const FILTERS = ["all", "active", "pending", "superseded", "rejected"];
@@ -30,7 +31,10 @@ export default function SkillsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Skills Library</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-semibold">Skills Library</h1>
+        <InfoTip text="Skills are reusable instructions injected into the agent's prompt. They evolve over time: BOOTSTRAP (initial), FIX (repaired), DERIVED (enhanced), CAPTURED (new pattern discovered)." />
+      </div>
 
       {/* Filters */}
       <div className="flex items-center gap-4 flex-wrap">
