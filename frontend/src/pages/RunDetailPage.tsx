@@ -1,22 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Check, X, CheckCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { fetchRunDetail } from "../api/runs";
 import type { RunDetail } from "../api/types";
 import TraceTimeline from "../components/TraceTimeline";
 import PriorityBadge from "../components/PriorityBadge";
 import { timeAgo } from "../utils/format";
 
-type Tab = "timeline" | "skills" | "analysis";
+type Tab = "result" | "timeline" | "skills" | "analysis";
 
 export default function RunDetailPage() {
   const { runId } = useParams<{ runId: string }>();
   const [run, setRun] = useState<RunDetail | null>(null);
-  const [tab, setTab] = useState<Tab>("timeline");
+  const [tab, setTab] = useState<Tab>("result");
 
   useEffect(() => {
     if (runId) fetchRunDetail(runId).then(setRun);
   }, [runId]);
+
+  // Extract the final assistant message (the agent's answer)
+  const resultMessage = useMemo(() => {
+    if (!run) return null;
+    // Walk backwards through the conversation to find the last assistant message
+    for (let i = run.conversation.length - 1; i >= 0; i--) {
+      const msg = run.conversation[i];
+      if (msg.role === "assistant" && msg.content) {
+        return msg.content;
+      }
+    }
+    return null;
+  }, [run]);
 
   if (!run) return <div className="text-center py-12" style={{ color: "var(--color-muted)" }}>Loading...</div>;
 
@@ -41,13 +55,70 @@ export default function RunDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1">
-        <button onClick={() => setTab("timeline")} className={tabClass("timeline")}>Timeline</button>
+        <button onClick={() => setTab("result")} className={tabClass("result")}>Result</button>
+        <button onClick={() => setTab("timeline")} className={tabClass("timeline")}>Trace</button>
         <button onClick={() => setTab("skills")} className={tabClass("skills")}>Skills Used</button>
         <button onClick={() => setTab("analysis")} className={tabClass("analysis")}>Analysis</button>
       </div>
 
       {/* Tab Content */}
       <div className="panel-surface">
+        {tab === "result" && (
+          <div className="space-y-4">
+            {/* Status banner */}
+            <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
+              run.llm_task_completed
+                ? "bg-green-50 text-green-700"
+                : "bg-yellow-50 text-yellow-700"
+            }`}>
+              {run.llm_task_completed
+                ? <><CheckCircle className="w-4 h-4 shrink-0" /> The agent completed this task successfully.</>
+                : <><X className="w-4 h-4 shrink-0" /> The agent did not complete this task.</>
+              }
+            </div>
+
+            {/* Final answer */}
+            {resultMessage ? (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--color-muted)" }}>
+                  Agent's Final Response
+                </h3>
+                <div
+                  className="p-4 rounded-lg text-sm leading-relaxed prose prose-sm max-w-none
+                             prose-headings:text-[var(--color-ink)] prose-p:text-[var(--color-ink)]
+                             prose-strong:text-[var(--color-ink)] prose-code:text-[var(--color-primary)]
+                             prose-code:bg-orange-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                             prose-pre:bg-gray-900 prose-pre:text-gray-100
+                             prose-a:text-[var(--color-primary)] prose-li:text-[var(--color-ink)]"
+                  style={{ background: "var(--color-bg-page)" }}
+                >
+                  <ReactMarkdown>{resultMessage.replace(/<COMPLETE>/g, "").trim()}</ReactMarkdown>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm py-4" style={{ color: "var(--color-muted)" }}>
+                No response recorded for this run.
+              </div>
+            )}
+
+            {/* Quick stats */}
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="text-center p-3 rounded-lg" style={{ background: "var(--color-bg-page)" }}>
+                <div className="text-lg font-semibold" style={{ color: "var(--color-ink)" }}>{run.iterations}</div>
+                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Iterations</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ background: "var(--color-bg-page)" }}>
+                <div className="text-lg font-semibold" style={{ color: "var(--color-ink)" }}>{run.trajectory.length}</div>
+                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Tool Calls</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ background: "var(--color-bg-page)" }}>
+                <div className="text-lg font-semibold" style={{ color: "var(--color-ink)" }}>{run.skill_judgments.length}</div>
+                <div className="text-xs" style={{ color: "var(--color-muted)" }}>Skills Used</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === "timeline" && (
           <TraceTimeline conversation={run.conversation} />
         )}
