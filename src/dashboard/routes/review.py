@@ -45,6 +45,7 @@ def get_review_queue(store: SkillStore = Depends(get_store)):
             data["reason"] = evo.get("reason", "") or ""
             data["evolution_type"] = evo.get("type", "fix")
             data["source_run_id"] = evo.get("run_id")
+            data["trigger"] = evo.get("trigger", "trigger1")
         else:
             data["priority"] = "medium"
             data["pattern_key"] = None
@@ -53,6 +54,7 @@ def get_review_queue(store: SkillStore = Depends(get_store)):
             data["reason"] = ""
             data["evolution_type"] = "fix"
             data["source_run_id"] = None
+            data["trigger"] = "trigger1"
 
         data["content_diff"] = skill.content_diff
         data["parent_content_snapshot"] = None
@@ -148,6 +150,7 @@ def get_review_detail(skill_id: str, store: SkillStore = Depends(get_store)):
         data["reason"] = evo.get("reason", "") or ""
         data["evolution_type"] = evo.get("type", "fix")
         data["source_run_id"] = evo.get("run_id")
+        data["trigger"] = evo.get("trigger", "trigger1")
 
     return data
 

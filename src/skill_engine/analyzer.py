@@ -163,13 +163,44 @@ def analyze_run(run_id: str, recording_dir: str, store: SkillStore) -> Execution
         store.insert_feature_request(run_id, feat.model_dump())
 
     # Record tool calls from traj
+    tool_names_used = set()
     for entry in traj_data:
+        tool_name = entry.get("tool", "unknown")
+        tool_names_used.add(tool_name)
         store.insert_tool_call(
             run_id=run_id,
-            tool_name=entry.get("tool", "unknown"),
+            tool_name=tool_name,
             success=entry.get("success", False),
             duration_ms=entry.get("duration_ms"),
             error_message=entry.get("error_message"),
         )
 
+    # Populate skill_tool_deps from actual execution data — if a skill was
+    # selected in a run that used a tool, record the dependency.
+    for sid in selected_skill_ids:
+        for tool_name in tool_names_used:
+            store.upsert_skill_tool_dep(sid, tool_name)
+
+    # Also store the tool names in agent_config for future extraction
+    _update_known_tool_names(tool_names_used)
+
     return analysis
+
+
+def _update_known_tool_names(new_names: set[str]):
+    """Append newly seen tool names to agent_config.json for future use."""
+    from src.config import AGENT_CONFIG_PATH
+
+    if not os.path.exists(AGENT_CONFIG_PATH):
+        return
+    try:
+        with open(AGENT_CONFIG_PATH) as f:
+            config = json.load(f)
+        existing = set(config.get("tool_names", []))
+        updated = existing | new_names
+        if updated != existing:
+            config["tool_names"] = sorted(updated)
+            with open(AGENT_CONFIG_PATH, "w") as f:
+                json.dump(config, f, indent=2)
+    except (json.JSONDecodeError, OSError):
+        pass

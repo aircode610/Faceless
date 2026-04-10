@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getAgentStatus, startRun, pollJob } from "../api/agent";
 import type { Job } from "../api/agent";
 import JobProgress from "../components/JobProgress";
+import { Play, Loader2, Bot, ArrowRight, CheckCircle, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 
 export default function RunTaskPage() {
   const [task, setTask] = useState("");
@@ -56,17 +57,17 @@ export default function RunTaskPage() {
   if (!bootstrapped) {
     return (
       <div className="max-w-2xl mx-auto text-center space-y-4 py-12">
-        <span className="text-5xl">🎭</span>
+        <img src="/faceless.svg" alt="Faceless" className="w-20 h-20 mx-auto" />
         <h1 className="text-2xl font-semibold">No Agent Yet</h1>
         <p style={{ color: "var(--color-muted)" }}>
           A man must first receive his face before he can serve.
         </p>
         <Link
           to="/create"
-          className="inline-block px-6 py-2.5 rounded-lg text-white text-sm font-medium"
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-white text-sm font-medium"
           style={{ background: "var(--color-primary)" }}
         >
-          Create an Agent →
+          <Bot className="w-4 h-4" /> Create an Agent
         </Link>
       </div>
     );
@@ -104,10 +105,12 @@ export default function RunTaskPage() {
         <button
           onClick={handleSubmit}
           disabled={!task.trim() || job?.status === "running"}
-          className="w-full py-3 rounded-lg text-white text-sm font-medium transition-opacity disabled:opacity-40"
+          className="w-full py-3 rounded-lg text-white text-sm font-medium transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
           style={{ background: "var(--color-primary)" }}
         >
-          {job?.status === "running" ? "⏳ Running..." : "⚔️ Execute Task"}
+          {job?.status === "running"
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Running...</>
+            : <><Play className="w-4 h-4" /> Execute Task</>}
         </button>
       </div>
 
@@ -120,9 +123,9 @@ export default function RunTaskPage() {
             <div className="space-y-3 pt-3 border-t" style={{ borderColor: "var(--color-border)" }}>
               {/* Summary */}
               <div className="flex items-center gap-2">
-                <span className={result.task_completed ? "text-green-600" : "text-yellow-600"}>
-                  {result.task_completed ? "✅ Task Completed" : "⚠️ Task Incomplete"}
-                </span>
+                {result.task_completed
+                  ? <><CheckCircle className="w-4 h-4 text-green-600" /><span className="text-green-600 text-sm font-medium">Task Completed</span></>
+                  : <><AlertTriangle className="w-4 h-4 text-yellow-600" /><span className="text-yellow-600 text-sm font-medium">Task Incomplete</span></>}
               </div>
               {result.execution_note && (
                 <p className="text-sm" style={{ color: "var(--color-muted)" }}>
@@ -160,9 +163,9 @@ export default function RunTaskPage() {
                     {(result.evolution_details as any[]).map((e: any, i: number) => (
                       <div key={i} className="text-xs flex items-center gap-2 p-2 rounded-lg"
                         style={{ background: "var(--color-bg-page)" }}>
-                        <span className={e.succeeded ? "text-green-600" : "text-red-500"}>
-                          {e.succeeded ? "✅" : "❌"}
-                        </span>
+                        {e.succeeded
+                          ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                          : <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
                         <span className="uppercase font-medium text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
                           {e.type}
                         </span>
@@ -177,18 +180,18 @@ export default function RunTaskPage() {
               <div className="flex gap-2">
                 <Link
                   to={`/runs/${result.run_id}`}
-                  className="flex-1 text-center py-2 rounded-lg text-white text-sm font-medium"
+                  className="flex-1 text-center py-2 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2"
                   style={{ background: "var(--color-accent)" }}
                 >
-                  View Run Details →
+                  View Run Details <ArrowRight className="w-4 h-4" />
                 </Link>
                 {(result.evolutions_succeeded || 0) > 0 && (
                   <Link
                     to="/review"
-                    className="flex-1 text-center py-2 rounded-lg text-white text-sm font-medium"
+                    className="flex-1 text-center py-2 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2"
                     style={{ background: "var(--color-primary)" }}
                   >
-                    Review Evolutions →
+                    Review Evolutions <ArrowRight className="w-4 h-4" />
                   </Link>
                 )}
                 <button

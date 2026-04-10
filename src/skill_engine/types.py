@@ -108,3 +108,12 @@ class ExecutionAnalysis(BaseModel):
     skill_judgments: list[SkillJudgment] = Field(default_factory=list)
     evolution_suggestions: list[EvolutionSuggestion] = Field(default_factory=list)
     feature_requests: list[FeatureRequest] = Field(default_factory=list)
+
+
+# ── LLM Confirmation Gate (Triggers 2 & 3) ────────
+
+class EvolutionConfirmation(BaseModel):
+    """LLM output from the confirmation gate for rule-based triggers."""
+    proceed: bool
+    reasoning: str
+    adjusted_direction: str = ""

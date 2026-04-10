@@ -37,6 +37,7 @@ export interface ReviewItem extends Skill {
   reason: string;
   evolution_type: string;
   source_run_id: string | null;
+  trigger: string;
 }
 
 export interface FeatureRequest {

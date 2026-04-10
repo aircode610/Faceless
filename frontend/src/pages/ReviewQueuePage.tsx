@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Check, X, ArrowRight } from "lucide-react";
 import { fetchQueue, approveSkill, rejectSkill, fetchFeatures, acceptFeature, deferFeature, dismissFeature } from "../api/review";
 import type { ReviewItem, FeatureRequest } from "../api/types";
 import PriorityBadge from "../components/PriorityBadge";
 import EvolutionTypeBadge from "../components/EvolutionTypeBadge";
+import TriggerBadge from "../components/TriggerBadge";
+import InfoTip from "../components/InfoTip";
 import DiffViewer from "../components/DiffViewer";
 import { timeAgo } from "../utils/format";
+
+const TRIGGER_DESCRIPTIONS: Record<string, string> = {
+  trigger1: "The LLM analyzed the last task execution and suggested this improvement based on what it observed in the conversation and tool traces.",
+  trigger2: "A tool this skill depends on has been failing frequently (success rate below 50%). This evolution adds resilience or alternative approaches.",
+  trigger3: "Periodic health check detected poor metrics for this skill \u2014 it may have a high fallback rate, low completion rate, or low overall effectiveness.",
+};
 
 export default function ReviewQueuePage() {
   const [queue, setQueue] = useState<ReviewItem[]>([]);
@@ -62,6 +71,7 @@ export default function ReviewQueuePage() {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-muted)" }}>
               Pending Evolutions ({queue.length})
+              <InfoTip text="Skills that the system proposed to improve. Each one needs human approval before going live. They can be a FIX (repair), DERIVED (enhancement), or CAPTURED (new skill)." />
             </h2>
             {queue.map((item) => (
               <div
@@ -73,9 +83,10 @@ export default function ReviewQueuePage() {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <PriorityBadge priority={item.priority || "medium"} />
                   <EvolutionTypeBadge type={item.evolution_type || "fix"} />
+                  <TriggerBadge trigger={item.trigger || "trigger1"} />
                   <span className="font-medium text-sm">{item.name}</span>
-                  <span className="text-xs" style={{ color: "var(--color-muted)" }}>
-                    v{item.generation}→v{item.generation + 1}
+                  <span className="text-xs flex items-center gap-0.5" style={{ color: "var(--color-muted)" }}>
+                    v{item.generation}<ArrowRight className="w-3 h-3" />v{item.generation + 1}
                   </span>
                 </div>
                 {item.pattern_key && (
@@ -105,6 +116,7 @@ export default function ReviewQueuePage() {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-muted)" }}>
               Feature Requests ({features.filter((f) => f.status === "pending").length})
+              <InfoTip text="Capability gaps the agent identified during execution — tasks it couldn't handle because no relevant skill exists. Accepting one signals that a new skill should be created." />
             </h2>
             {features.filter((f) => f.status === "pending").map((feat) => (
               <div key={feat.id} className="record-card">
@@ -137,10 +149,20 @@ export default function ReviewQueuePage() {
         <div className="col-span-3">
           {selected ? (
             <div className="panel-surface space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <PriorityBadge priority={selected.priority || "medium"} />
                 <EvolutionTypeBadge type={selected.evolution_type || "fix"} />
+                <TriggerBadge trigger={selected.trigger || "trigger1"} />
                 <span className="font-semibold">{selected.name}</span>
+              </div>
+
+              {/* Trigger explainer — helps reviewers understand the source */}
+              <div
+                className="flex items-start gap-2 p-2.5 rounded-lg text-xs leading-relaxed"
+                style={{ background: "var(--color-bg-page)", color: "var(--color-muted)" }}
+              >
+                <span className="font-semibold shrink-0">Source:</span>
+                <span>{TRIGGER_DESCRIPTIONS[selected.trigger] || TRIGGER_DESCRIPTIONS.trigger1}</span>
               </div>
 
               {/* Reason — WHY this evolution, grounded in trace evidence */}
@@ -163,7 +185,7 @@ export default function ReviewQueuePage() {
                         className="text-[10px] px-1.5 py-0.5 rounded-full bg-white border hover:bg-gray-50"
                         style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
                       >
-                        view source run →
+                        view source run <ArrowRight className="w-3 h-3 inline" />
                       </Link>
                     )}
                   </div>
@@ -193,17 +215,17 @@ export default function ReviewQueuePage() {
               <div className="flex gap-3 pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
                 <button
                   onClick={handleApprove}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
                   style={{ background: "var(--color-accent)" }}
                 >
-                  ✓ Approve
+                  <Check className="w-4 h-4" /> Approve
                 </button>
                 <button
                   onClick={() => setShowReject(true)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
                   style={{ background: "var(--color-danger)" }}
                 >
-                  ✗ Reject
+                  <X className="w-4 h-4" /> Reject
                 </button>
               </div>
 
@@ -226,7 +248,7 @@ export default function ReviewQueuePage() {
             </div>
           ) : (
             <div className="panel-surface text-center py-12" style={{ color: "var(--color-muted)" }}>
-              <div className="text-4xl mb-2">🎭</div>
+              <img src="/faceless.svg" alt="" className="w-12 h-12 mx-auto mb-2 opacity-40" />
               <div className="text-sm">Select an item from the queue to review</div>
               <div className="text-xs mt-1">"A man must wait."</div>
             </div>
