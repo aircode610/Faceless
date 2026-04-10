@@ -6,8 +6,8 @@ Each supported MCP name maps to a stdio-based MCP server spec that gets
 launched on demand and exposed as a set of LangChain tool objects.
 
 Supported today:
-  - "github" -> @modelcontextprotocol/server-github (needs GITHUB_PERSONAL_ACCESS_TOKEN)
-  - "search" -> tavily-mcp                         (needs TAVILY_API_KEY)
+  - "github" -> ghcr.io/github/github-mcp-server (Docker, needs GITHUB_PERSONAL_ACCESS_TOKEN)
+  - "search" -> tavily-mcp                        (npx, needs TAVILY_API_KEY)
 
 Unknown MCP names are silently skipped so selecting e.g. "slack" in the
 bootstrap does not break the execution pipeline.
@@ -24,6 +24,13 @@ from src.config import AGENT_CONFIG_PATH
 # Map of MCP name -> MultiServerMCPClient server spec.
 # This is the single source of truth for which MCPs Faceless supports —
 # both the bootstrap form and the runtime tool loader read from here.
+#
+# "env_passthrough" lists env vars required by the server. They are
+# validated at load time and injected into the subprocess environment.
+#
+# For Docker-based servers, "args_factory" is a callable that returns
+# the final args list, allowing env var values to be interpolated into
+# the docker run command at runtime.
 MCP_SERVER_SPECS: dict[str, dict] = {
     "github": {
         "description": (
@@ -31,8 +38,12 @@ MCP_SERVER_SPECS: dict[str, dict] = {
             "Use for any task that involves inspecting code changes, PR "
             "metadata, file contents, or posting review comments."
         ),
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "command": "docker",
+        "args_factory": lambda: [
+            "run", "-i", "--rm",
+            "-e", f"GITHUB_PERSONAL_ACCESS_TOKEN={os.environ.get('GITHUB_PERSONAL_ACCESS_TOKEN', '')}",
+            "ghcr.io/github/github-mcp-server",
+        ],
         "transport": "stdio",
         "env_passthrough": ["GITHUB_PERSONAL_ACCESS_TOKEN"],
     },
@@ -80,9 +91,15 @@ def _build_server_config(selected: list[str]) -> dict:
             )
             continue
 
+        # Resolve args — use args_factory if provided (for Docker servers
+        # that need env var values interpolated into CLI flags at runtime),
+        # otherwise use the static args list.
+        args_factory = spec.get("args_factory")
+        args = args_factory() if args_factory else list(spec["args"])
+
         entry = {
             "command": spec["command"],
-            "args": list(spec["args"]),
+            "args": args,
             "transport": spec["transport"],
         }
         # IMPORTANT: MCP's stdio transport REPLACES the subprocess env when
@@ -107,10 +124,17 @@ async def _load_tools_async(selected: list[str]) -> list:
 
     config = _build_server_config(selected)
     if not config:
+        print("[mcp] No server configs built — check env vars and server specs")
         return []
+
+    print(f"[mcp] Connecting to servers: {list(config.keys())}")
+    for name, cfg in config.items():
+        print(f"  [{name}] {cfg['command']} {' '.join(cfg['args'][:3])}...")
+
     client = MultiServerMCPClient(config)
     try:
         tools = await client.get_tools()
+        print(f"[mcp] Loaded {len(tools)} tools: {[t.name for t in tools]}")
         return tools
     except Exception as e:
         print(f"[mcp] Failed to load MCP tools: {e}")
