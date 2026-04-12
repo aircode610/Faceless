@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Check, X } from "lucide-react";
-import { fetchSkillDetail } from "../api/skills";
+import { Check, X, Pencil, Save, XCircle, MessageSquare, Loader2, RotateCcw } from "lucide-react";
+import { fetchSkillDetail, updateSkillContent, submitSkillFeedback } from "../api/skills";
 import type { SkillDetail } from "../api/types";
 import EvolutionTypeBadge from "../components/EvolutionTypeBadge";
 import InfoTip from "../components/InfoTip";
@@ -22,9 +22,89 @@ export default function SkillDetailPage() {
   const { skillId } = useParams<{ skillId: string }>();
   const [skill, setSkill] = useState<SkillDetail | null>(null);
 
-  useEffect(() => {
+  // Editor state
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Feedback state
+  const [feedback, setFeedback] = useState("");
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [revisedContent, setRevisedContent] = useState<string | null>(null);
+
+  // Toast
+  const [toast, setToast] = useState("");
+
+  const reload = () => {
     if (skillId) fetchSkillDetail(skillId).then(setSkill);
-  }, [skillId]);
+  };
+
+  useEffect(() => { reload(); }, [skillId]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  };
+
+  const handleStartEdit = () => {
+    if (!skill) return;
+    setEditContent(skill.content);
+    setEditing(true);
+    setRevisedContent(null);
+  };
+
+  const handleSave = async () => {
+    if (!skill) return;
+    setSaving(true);
+    try {
+      await updateSkillContent(skill.skill_id, editContent);
+      setEditing(false);
+      showToast("Skill updated successfully");
+      reload();
+    } catch {
+      showToast("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditing(false);
+    setEditContent("");
+  };
+
+  const handleFeedback = async () => {
+    if (!skill || !feedback.trim()) return;
+    setFeedbackLoading(true);
+    setRevisedContent(null);
+    try {
+      const result = await submitSkillFeedback(skill.skill_id, feedback);
+      setRevisedContent(result.revised);
+      setEditContent(result.revised);
+      setEditing(true);
+    } catch {
+      showToast("Failed to generate revision");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handleAcceptRevision = async () => {
+    if (!skill || !revisedContent) return;
+    setSaving(true);
+    try {
+      await updateSkillContent(skill.skill_id, revisedContent);
+      setEditing(false);
+      setRevisedContent(null);
+      setFeedback("");
+      showToast("Revision applied");
+      reload();
+    } catch {
+      showToast("Failed to save revision");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!skill) return <div className="text-center py-12" style={{ color: "var(--color-muted)" }}>Loading...</div>;
 
@@ -37,6 +117,12 @@ export default function SkillDetailPage() {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-2 rounded-lg bg-green-100 text-green-800 text-sm shadow-lg">
+          {toast}
+        </div>
+      )}
+
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-semibold">{skill.name}</h1>
         <EvolutionTypeBadge type={skill.lineage_origin} />
@@ -79,16 +165,125 @@ export default function SkillDetailPage() {
             </div>
           </div>
 
-          {/* Content */}
+          {/* Skill Content — View / Edit */}
           <div className="panel-surface">
-            <h2 className="text-sm font-semibold mb-3">
-              SKILL.md
-              <InfoTip text="The full skill definition file. Contains instructions, procedures, and context that get injected into the agent's prompt when this skill is selected." />
-            </h2>
-            <pre className="text-xs whitespace-pre-wrap p-4 rounded-lg overflow-x-auto" style={{ background: "var(--color-bg-page)" }}>
-              {skill.content}
-            </pre>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">
+                SKILL.md
+                <InfoTip text="The full skill definition file. Contains instructions, procedures, and context that get injected into the agent's prompt when this skill is selected." />
+              </h2>
+              {skill.status === "active" && !editing && (
+                <button
+                  onClick={handleStartEdit}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-gray-50"
+                  style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </button>
+              )}
+              {editing && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white"
+                    style={{ background: "var(--color-accent)" }}
+                  >
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border"
+                    style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+                  >
+                    <XCircle className="w-3.5 h-3.5" /> Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {editing ? (
+              <textarea
+                value={editContent}
+                onChange={(e) => { setEditContent(e.target.value); setRevisedContent(null); }}
+                className="w-full text-xs font-mono p-4 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-y"
+                style={{ background: "var(--color-bg-page)", borderColor: "var(--color-border)", minHeight: 400 }}
+                spellCheck={false}
+              />
+            ) : (
+              <pre className="text-xs whitespace-pre-wrap p-4 rounded-lg overflow-x-auto" style={{ background: "var(--color-bg-page)" }}>
+                {skill.content}
+              </pre>
+            )}
           </div>
+
+          {/* Feedback Section */}
+          {skill.status === "active" && (
+            <div className="panel-surface">
+              <h2 className="text-sm font-semibold mb-2">
+                <MessageSquare className="w-4 h-4 inline mr-1.5" style={{ color: "var(--color-primary)" }} />
+                Improve with Feedback
+                <InfoTip text="Describe what you want to change in plain English. An LLM will revise the skill based on your feedback. You can review and edit the result before saving." />
+              </h2>
+              <p className="text-xs mb-3" style={{ color: "var(--color-muted)" }}>
+                Tell the system what to change — e.g. "Add a step for checking environment variables" or "Make the error handling more defensive". The LLM will rewrite the skill and show you the result for approval.
+              </p>
+              <div className="flex gap-2">
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="What should change about this skill?"
+                  className="flex-1 text-sm p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-none"
+                  style={{ borderColor: "var(--color-border)" }}
+                  rows={2}
+                />
+                <button
+                  onClick={handleFeedback}
+                  disabled={feedbackLoading || !feedback.trim()}
+                  className="self-end px-4 py-2.5 rounded-lg text-sm font-medium text-white flex items-center gap-1.5 disabled:opacity-50"
+                  style={{ background: "var(--color-primary)" }}
+                >
+                  {feedbackLoading
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Revising...</>
+                    : <><RotateCcw className="w-4 h-4" /> Revise</>
+                  }
+                </button>
+              </div>
+
+              {/* Revision result */}
+              {revisedContent && (
+                <div className="mt-3 p-3 rounded-lg border-l-4" style={{ background: "#f0fdf4", borderLeftColor: "var(--color-accent)" }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
+                      Revised version ready
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleAcceptRevision}
+                        disabled={saving}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium text-white"
+                        style={{ background: "var(--color-accent)" }}
+                      >
+                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                        Accept & Save
+                      </button>
+                      <button
+                        onClick={() => setRevisedContent(null)}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium border"
+                        style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+                      >
+                        <X className="w-3 h-3" /> Discard
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs mb-2" style={{ color: "var(--color-muted)" }}>
+                    The revised content is loaded in the editor above. You can edit it further before saving, or accept it directly.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right column */}

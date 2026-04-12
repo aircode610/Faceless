@@ -44,3 +44,12 @@ class BootstrapRequest(BaseModel):
 
 class RunTaskRequest(BaseModel):
     task: str
+
+
+class UpdateSkillContentRequest(BaseModel):
+    content: str
+    editor_id: str = "dashboard"
+
+
+class SkillFeedbackRequest(BaseModel):
+    feedback: str
