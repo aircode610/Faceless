@@ -164,7 +164,6 @@ class SkillStore:
 
     def _run_migrations(self):
         """Idempotent schema migrations for existing DBs."""
-        # Add reason column to evolution_suggestions if missing
         cols = [
             row[1] for row in
             self.conn.execute("PRAGMA table_info(evolution_suggestions)").fetchall()
@@ -172,6 +171,11 @@ class SkillStore:
         if "reason" not in cols:
             self.conn.execute(
                 "ALTER TABLE evolution_suggestions ADD COLUMN reason TEXT"
+            )
+            self.conn.commit()
+        if "user_feedback" not in cols:
+            self.conn.execute(
+                "ALTER TABLE evolution_suggestions ADD COLUMN user_feedback TEXT"
             )
             self.conn.commit()
 
@@ -367,6 +371,13 @@ class SkillStore:
                 "UPDATE evolution_suggestions SET status = ? WHERE id = ?",
                 (status, evo_id),
             )
+        self.conn.commit()
+
+    def update_user_feedback(self, evo_id: str, feedback: str):
+        self.conn.execute(
+            "UPDATE evolution_suggestions SET user_feedback = ? WHERE id = ?",
+            (feedback, evo_id),
+        )
         self.conn.commit()
 
     def get_pending_suggestions(self) -> list[dict]:

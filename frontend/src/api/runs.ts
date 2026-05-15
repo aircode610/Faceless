@@ -6,3 +6,6 @@ export const fetchRuns = (params?: Record<string, string>) =>
 
 export const fetchRunDetail = (id: string) =>
   api.get<RunDetail>(`/runs/${id}`).then((r) => r.data);
+
+export const submitSuggestionFeedback = (evoId: string, feedback: string) =>
+  api.post<{ status: string }>(`/runs/suggestions/${evoId}/feedback`, { feedback }).then((r) => r.data);

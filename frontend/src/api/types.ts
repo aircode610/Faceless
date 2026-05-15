@@ -90,8 +90,12 @@ export interface EvolutionSuggestion {
   id: string;
   type: string;
   direction: string;
+  reason: string;
   priority: string;
   pattern_key: string;
+  target_skill_ids: string;
+  status: string;
+  user_feedback: string | null;
 }
 
 export interface RunDetail extends RunSummary {

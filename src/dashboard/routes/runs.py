@@ -1,4 +1,4 @@
-"""Execution runs endpoints: list, detail."""
+"""Execution runs endpoints: list, detail, feedback."""
 
 from __future__ import annotations
 
@@ -6,9 +6,14 @@ import json
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from src.dashboard.dependencies import get_store
 from src.skill_engine.store import SkillStore
+
+
+class SuggestionFeedbackRequest(BaseModel):
+    feedback: str
 
 router = APIRouter()
 
@@ -87,3 +92,20 @@ def get_run_detail(run_id: str, store: SkillStore = Depends(get_store)):
     data["evolution_suggestions"] = [dict(e) for e in evos]
 
     return data
+
+
+@router.post("/runs/suggestions/{evo_id}/feedback")
+def submit_suggestion_feedback(
+    evo_id: str,
+    req: SuggestionFeedbackRequest,
+    store: SkillStore = Depends(get_store),
+):
+    """Attach user feedback to an evolution suggestion so it's included in the evolution prompt."""
+    row = store.conn.execute(
+        "SELECT id FROM evolution_suggestions WHERE id = ?", (evo_id,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Suggestion not found")
+
+    store.update_user_feedback(evo_id, req.feedback)
+    return {"status": "saved", "evo_id": evo_id}

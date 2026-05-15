@@ -214,6 +214,7 @@ class EvolutionState(TypedDict):
     target_skill_ids: list[str]
     direction: str
     category: str
+    user_feedback: str  # Human feedback to incorporate
     # Internal
     iteration: int
     max_iterations: int
@@ -237,6 +238,12 @@ def build_prompt_node(state: EvolutionState) -> dict:
     const_block = _make_constitution_block(constitution)
     evo_type = state["evolution_type"]
 
+    # Build a human feedback block if provided
+    feedback = state.get("user_feedback", "")
+    feedback_block = ""
+    if feedback:
+        feedback_block = f"\n\n## Human Feedback (prioritize this)\n{feedback}\n"
+
     try:
         if evo_type == "fix":
             target_id = state["target_skill_ids"][0] if state["target_skill_ids"] else ""
@@ -247,7 +254,7 @@ def build_prompt_node(state: EvolutionState) -> dict:
             prompt = EVOLUTION_FIX_TEMPLATE.format(
                 constitution_block=const_block,
                 current_content=skill.content,
-                direction=state["direction"],
+                direction=state["direction"] + feedback_block,
                 failure_context="From post-execution analysis.",
                 tool_issue_summary="None reported.",
                 metric_summary=_build_metric_summary(skill),
@@ -263,7 +270,7 @@ def build_prompt_node(state: EvolutionState) -> dict:
             prompt = EVOLUTION_DERIVED_TEMPLATE.format(
                 constitution_block=const_block,
                 parent_content=skill.content,
-                direction=state["direction"],
+                direction=state["direction"] + feedback_block,
                 execution_insights="From post-execution analysis.",
                 metric_summary=_build_metric_summary(skill),
                 principles=EVOLUTION_PRINCIPLES,
@@ -272,7 +279,7 @@ def build_prompt_node(state: EvolutionState) -> dict:
         elif evo_type == "captured":
             prompt = EVOLUTION_CAPTURED_TEMPLATE.format(
                 constitution_block=const_block,
-                direction=state["direction"],
+                direction=state["direction"] + feedback_block,
                 category=state.get("category", "workflow"),
                 execution_highlights="Novel pattern detected during execution analysis.",
                 principles=EVOLUTION_PRINCIPLES,
@@ -530,6 +537,7 @@ def evolve_skill(
     target_skill_ids: list[str],
     direction: str,
     category: str = "workflow",
+    user_feedback: str = "",
 ) -> dict:
     """
     Run a single evolution. Returns the final state dict.
@@ -540,6 +548,7 @@ def evolve_skill(
         target_skill_ids: List of skill IDs to evolve (empty for captured)
         direction: What to change/create
         category: Skill category (for captured)
+        user_feedback: Optional human feedback to incorporate
     """
     evolver = create_evolver()
 
@@ -549,6 +558,7 @@ def evolve_skill(
         "target_skill_ids": target_skill_ids,
         "direction": direction,
         "category": category,
+        "user_feedback": user_feedback,
         "iteration": 0,
         "max_iterations": EVOLUTION_MAX_ITERATIONS,
         "prompt": "",
@@ -598,6 +608,7 @@ def process_pending_evolutions(store: SkillStore) -> list[dict]:
             target_skill_ids=target_ids,
             direction=direction,
             category=category,
+            user_feedback=sug.get("user_feedback") or "",
         )
 
         results.append({
